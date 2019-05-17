@@ -35,7 +35,7 @@ class GrammarClass:
         return "S: {0}\nT: {1}\nNT: {2}".format(self.initialSymbol, self.terminals, self.nonTerminals)
 
     def addProduction(self, noTerminal, *productions):
-        for production in productions:            
-            self.nonTerminals[NoTerminal(noTerminal)].append([NoTerminal(name = x) if NoTerminal(x) in self.nonTerminals else Terminal(x) for x in production])
+        for production in productions:
+            self.nonTerminals[NoTerminal(noTerminal)].append(tuple([NoTerminal(name = x) if NoTerminal(x) in self.nonTerminals else Terminal(x) for x in production]))
                     
 
