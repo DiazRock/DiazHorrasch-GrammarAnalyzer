@@ -48,9 +48,11 @@ class LL_Parser(PredictiveParser):
     def Asign(self,table, symbolForStack, inputSymbol, prod):
         if not table[(symbolForStack,inputSymbol)]:
             table[(symbolForStack, inputSymbol)] = prod
+            return True
         else:
-            print ("Error, la gramática no es LL(1):\nConflictos a la hora de escoger entre las decisiones {0} y {1} para el terminal {2}".format((symbolForStack,table[(symbolForStack, inputSymbol)]), (symbolForStack, inputSymbol), inputSymbol))
-            return None
+            print ("Error, la gramática no es LL(1):\nConflictos a la hora de escoger entre las decisiones {0} y {1} para el terminal {2}".format(
+                (symbolForStack,table[(symbolForStack, inputSymbol)]), (symbolForStack, prod), inputSymbol))
+            return False
         
     def __init__(self, grammar):
         super().__init__(grammar)

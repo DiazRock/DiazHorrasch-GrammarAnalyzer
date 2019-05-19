@@ -30,12 +30,13 @@ class GrammarClass:
         self.terminals = {Terminal(x) for x in terminals}
         self.nonTerminals = {NoTerminal(x): [] for x in nonTerminals}
         self.initialSymbol = NoTerminal(name = initialSymbol)
-        
+        self.LeftRecSet = []
     def __repr__(self):
         return "S: {0}\nT: {1}\nNT: {2}".format(self.initialSymbol, self.terminals, self.nonTerminals)
 
     def addProduction(self, noTerminal, *productions):
         for production in productions:
             self.nonTerminals[NoTerminal(noTerminal)].append(tuple([NoTerminal(name = x) if NoTerminal(x) in self.nonTerminals else Terminal(x) for x in production]))
-                    
+            if noTerminal == production[0]: self.LeftRecSet.append(NoTerminal(noTerminal))
+                            
 

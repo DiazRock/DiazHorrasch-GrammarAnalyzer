@@ -43,6 +43,15 @@ G5.addProduction("B", ['a', 'Z'], ['œ'])
 G5.addProduction("Y", ['c', 'a', "Y"], ["d"])
 G5.addProduction("Z", ['d', 'a', "Z"], ["c"])
 
+G6 = GrammarClass(initialSymbol= "S", terminals= ['a', 'b', 'd'], nonTerminals= ['S','B', 'D'])
+G6.addProduction("S", ['B', 'b'],['D','d'])
+G6.addProduction("B", ['B', 'a'], ['a'])
+G6.addProduction("D", ['D', 'a'], ['a'])
+
+G7 = GrammarClass(initialSymbol= "E", terminals= ['int', '*', '(', ')', '+'], nonTerminals= ['E','T'])
+G7.addProduction("E", ['T'], ['T', '+','E'])
+G7.addProduction("T", ['int'], ['int', '*','T'], ['(', 'E' ,')'])
+
 print (CalculateFirst(G))
 Firsts = CalculateFirst(G)
 print(CalculateFollow(G, Firsts), '\n')
@@ -54,6 +63,10 @@ FirstsG2 = CalculateFirst(G2)
 print(FirstsG2, CalculateFollow(G2, FirstsG2), '\n', sep = '\n')
  
 
-print(LL_Parser(G3).printTable())
-print(LL_Parser(G4).printTable())
-print(LL_Parser(G5).printTable())
+LL_Parser(G3).printTable()
+LL_Parser(G4).printTable()
+LL_Parser(G5).printTable()
+
+deleteInmediateLeftRecusrive(G6)
+
+refactorization(G7)

@@ -58,4 +58,42 @@ def Add(First, terminalList):
     First.update(terminalList)    
     return before != First
 
+def deleteInmediateLeftRecusrive(G:GrammarClass):
+    nonRecusriveSet = {}
+    for x in G.LeftRecSet:
+        newNotTerminal = NoTerminal(x.name + "'")
+        toInsert = {x:[], newNotTerminal: [tuple([Epsilon()])]}
+        for prod in G.nonTerminals[x]:
+            if prod[0] == x:
+                toInsert[newNotTerminal].append((*prod[1:],newNotTerminal))
+            else:
+                if not (len(prod) == 1 and prod[0] ==  Epsilon()):
+                    toInsert[x].append((*prod, newNotTerminal))
+        nonRecusriveSet.update(toInsert)
+    G.nonTerminals.update(nonRecusriveSet)
+
+def refactorization(G:GrammarClass):
+    commonPrefixForNonTerminal = {}
+    for nonTerminal in G.nonTerminals:
+        for i in range(min(len(prod) for prod in G.nonTerminals[nonTerminal]),0,-1):
+            isCommonPrefix = False
+            for j in range(len(G.nonTerminals[nonTerminal]) - 1):
+                if G.nonTerminals[nonTerminal][j][:i] != G.nonTerminals[nonTerminal][j + 1][:i]:
+                    isCommonPrefix = False
+                    break
+                isCommonPrefix = True
+            if isCommonPrefix:
+                commonPrefixForNonTerminal.update({nonTerminal:G.nonTerminals[nonTerminal][0][:i]})
+
+    if not commonPrefixForNonTerminal: return False
+    for nonTerminal in commonPrefixForNonTerminal:
+        for prod in G.nonTerminals[nonTerminal]:
+            refactoredNonTerminal = NoTerminal(nonTerminal.name + "'")
+            G.nonTerminals.update({refactoredNonTerminal:[]})
+            if prod[:len(commonPrefixForNonTerminal[nonTerminal])] == commonPrefixForNonTerminal[nonTerminal]:
+                G.nonTerminals[refactoredNonTerminal].append((*prod[len(commonPrefixForNonTerminal[nonTerminal]):]))     
+                G.nonTerminal[nonTerminal].remove(prod)
+        
+        G.nonTerminals[nonTerminal].append((*prod[:len(commonPrefixForNonTerminal[nonTerminal])], refactoredNonTerminal))
+    return True               
             
