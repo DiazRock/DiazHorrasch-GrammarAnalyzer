@@ -73,27 +73,50 @@ def deleteInmediateLeftRecusrive(G:GrammarClass):
     G.nonTerminals.update(nonRecusriveSet)
 
 def refactorization(G:GrammarClass):
-    commonPrefixForNonTerminal = {}
-    for nonTerminal in G.nonTerminals:
-        for i in range(min(len(prod) for prod in G.nonTerminals[nonTerminal]),0,-1):
-            isCommonPrefix = False
-            for j in range(len(G.nonTerminals[nonTerminal]) - 1):
-                if G.nonTerminals[nonTerminal][j][:i] != G.nonTerminals[nonTerminal][j + 1][:i]:
-                    isCommonPrefix = False
-                    break
-                isCommonPrefix = True
-            if isCommonPrefix:
-                commonPrefixForNonTerminal.update({nonTerminal:G.nonTerminals[nonTerminal][0][:i]})
-
-    if not commonPrefixForNonTerminal: return False
-    for nonTerminal in commonPrefixForNonTerminal:
-        for prod in G.nonTerminals[nonTerminal]:
-            refactoredNonTerminal = NoTerminal(nonTerminal.name + "'")
-            G.nonTerminals.update({refactoredNonTerminal:[]})
-            if prod[:len(commonPrefixForNonTerminal[nonTerminal])] == commonPrefixForNonTerminal[nonTerminal]:
-                G.nonTerminals[refactoredNonTerminal].append((*prod[len(commonPrefixForNonTerminal[nonTerminal]):]))     
-                G.nonTerminal[nonTerminal].remove(prod)
-        
-        G.nonTerminals[nonTerminal].append((*prod[:len(commonPrefixForNonTerminal[nonTerminal])], refactoredNonTerminal))
-    return True               
+    while True:            
+        commonPrefixForNonTerminal = {}
+        for X in G.nonTerminals:
+            G.nonTerminals[X], temp = refactorNonTerminal(X, G.nonTerminals[X])
+            if not temp: return 
+            commonPrefixForNonTerminal.update(temp)
+        G.nonTerminals.update(commonPrefixForNonTerminal)                   
             
+def refactorNonTerminal(X: NoTerminal, productions):
+    
+    preffixForProduction = {}
+    i = 0
+    for prod in productions:
+        preffixForProduction.update({prod:([],NoTerminal("{0}{1}".format(X.name,i)))})
+        i+=1
+    
+    
+    for i in range(len(productions)):
+        for j in range(i+1,len(productions)):
+            commonPref = commonPreffix(productions[i], productions[j])
+            representativeNonTerminal = preffixForProduction[productions[j]][1]
+            if len(preffixForProduction[productions[i]][0]) < len(commonPref):
+                preffixForProduction[productions[i]] = (commonPref, representativeNonTerminal)
+                
+            preffixForProduction[productions[j]] = (commonPref, representativeNonTerminal)
+    
+    newProductionsForX = []
+    newNonTerminals = {}
+    for prod in productions:
+        currentRepresentativeNonTerminal = preffixForProduction[prod][1]
+        if preffixForProduction[prod][0]:
+            toInsert = prod[len(preffixForProduction[prod][0]):] if prod[len(preffixForProduction[prod][0]):] else tuple([Epsilon()])
+            if not currentRepresentativeNonTerminal in newNonTerminals:
+                newNonTerminals.update({currentRepresentativeNonTerminal: [toInsert]})
+            else:
+                newNonTerminals[currentRepresentativeNonTerminal].append(toInsert)
+                newProductionsForX.append(preffixForProduction[prod][0] + tuple([currentRepresentativeNonTerminal]))
+        else:
+            newProductionsForX.append(prod)
+    return newProductionsForX, newNonTerminals
+        
+
+def commonPreffix(prod1, prod2):
+    for i in range(min(len(prod1), len(prod2))):
+        if(prod1[i] != prod2[i]):
+            return prod1[:i]
+    return prod1[:min(len(prod1), len(prod2))]        

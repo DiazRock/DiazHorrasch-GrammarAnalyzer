@@ -70,3 +70,4 @@ LL_Parser(G5).printTable()
 deleteInmediateLeftRecusrive(G6)
 
 refactorization(G7)
+print(G7)
