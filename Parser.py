@@ -64,17 +64,33 @@ class LR_Parser(PredictiveParser):
         self.initialSym = grammar.initialSymbol
         self.augmentedGrammar = GrammarClass(initialSymbol = NoTerminal(name = self.initialSym + "'"), terminals = grammar.terminals, nonTerminals={NoTerminal(name = self.initialSym + "'")}.union(grammar.nonTerminals) )
 
-    def canonical_LR(self):    
-        #La línea 69 es para crear todos los items de las producciones.
-        list_of_Items = [item(label = "{0} {1} {2}".format(X, i, prod), grammar= self.augmentedGrammar, nonTerminal = X, point_Position = i, production = prod) for X in self.augmentedGrammar.nonTerminals for prod in self.augmentedGrammar.nonTerminals[X] for i in range(len(prod))]
-        canonical_states = []
-        while (list_of_Items):
-            if list_of_Items[0].isKernel:
-               canonical_states.append(canonical_State(label= list_of_Items.pop(0), grammar = self.augmentedGrammar))
-               LR_Parser.closure(self, canonical_states, list_of_Items)
+    def canonical_LR(self):
+        initialState =canonical_State (setOfItems = [item(label = "I{0}".format(0), grammar = self.augmentedGrammar, nonTerminal= self.augmentedGrammar.initialSymbol, point_Position = 0, production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol])], grammar = self.augmentedGrammar)          
+        canonical_states = [initialState]
+        statesQueue = [canonical_states[0]]
+        transition_table = {}
+
+        while (statesQueue):
+            currentState = statesQueue.pop(0)
+            currentState.extend (LR_Parser.closure(self, currentState.kernel_items))
+            symbols = {x for x in item.production[item.point_Position:] for item in currentState.setOfItems}    
+            for x in symbols:
+                new_state = LR_Parser.goto(self, currentState, x)
+                if not new_state in canonical_states:
+                    canonical_states.append(new_state)
+                    statesQueue.append(new_state)
+                    transition_table.update({(currentState, x): new_state})
+
+    def goto(self, current_state, grammar_symbol):
+        new_state = canonical_State(setOfItems = [], grammar = self.augmentedGrammar)
+        for item in current_state.kernel_items:
+            if item.production[item.point_Position] == grammar_symbol:
+                new_state.extend([])
+            pass
+        pass
 
     def closure(self, kernel_items):
-        closure = canonical_State(label = kernel_items, grammar = self.augmentedGrammar)        
+        closure = []
         itemsQueue = list(kernel_items)
         visited = {X:False for X in self.augmentedGrammar.nonTerminals}
         for item in kernel_items:
@@ -86,5 +102,5 @@ class LR_Parser(PredictiveParser):
                     itemsToQueue = [item(label = "{0} {1} {2}".format(X, 0, prod)) for prod in self.augmentedGrammar.nonTerminals[X]]
                     itemsQueue.extend(itemsToQueue)
                     visited[X] = True
-                    closure.label.extend(itemsToQueue)            
+                    closure.extend(itemsToQueue)            
         return closure

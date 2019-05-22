@@ -25,12 +25,25 @@ class state:
 
 class canonical_State(state):    
 
-    def __equal__(self, other):
-        for item in self.label:
-            if not item in other.label and item.isKernel:
-                return False
-        return True
-        
+    def __init__(self, setOfItems, grammar:GrammarClass):
+        self.setOfItems = setOfItems
+        self.kernel_items = [x for x in setOfItems if x.isKernel]
+        self.grammar =grammar
+
+    def extend(self, otherList):
+        self.label.extend(otherList)
+        self.kernel_items.extend(x for x in otherList if x.isKernel)
+
+    def __eq__(self, other):
+        return hash(self) is hash(other)
+
+
+
+    def __hash__(self):
+        toReturn = 0
+        for item in self.kernel_items:            
+            toReturn += item(hash)
+        return toReturn 
 
 class item(state):
     def __init__(self, label, grammar:GrammarClass, nonTerminal, point_Position, production):
@@ -42,3 +55,6 @@ class item(state):
 
     def __repr__(self):
         return self.nonTerminal + "->" + self.production[:self.point_Position] + "." + self.production[self.point_Position:]
+    
+    def __hash__(self):
+        return hash(self.nonTerminal) + hash(self.point_Position) + hash(self.production)
