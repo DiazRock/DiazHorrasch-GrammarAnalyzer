@@ -38,5 +38,5 @@ class GrammarClass:
         for production in productions:
             self.nonTerminals[NoTerminal(noTerminal)].append(tuple([NoTerminal(name = x) if NoTerminal(x) in self.nonTerminals else Terminal(x) for x in production]))
             if noTerminal == production[0]: self.LeftRecSet.append(NoTerminal(noTerminal))
-                            
+                                
 
