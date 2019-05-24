@@ -29,6 +29,7 @@ class state:
 class canonical_State(state):    
 
     def __init__(self, label, setOfItems, grammar:GrammarClass):
+        self.label = label
         self.setOfItems = setOfItems
         self.kernel_items = [x for x in setOfItems if x.isKernel]
         self.grammar =grammar
@@ -38,13 +39,13 @@ class canonical_State(state):
         self.kernel_items.extend(x for x in otherList if x.isKernel)
 
     def __eq__(self, other):
-        return hash(self) is hash(other)
+        return self.kernel_items == other.kernel_items
 
     def __repr__(self):
         l = []
         for x in self.setOfItems:
             l.append (repr(x))
-        return str(self.label) + ": " + str(l) 
+        return repr(self.label) + ": " + repr(l) 
 
 
     def __hash__(self):
@@ -58,7 +59,7 @@ class Item(state):
         super().__init__(label, grammar)
         self.nonTerminal = nonTerminal
         self.production = production
-        self.point_Position = point_Position * (not(len(self.production) == 1 and self.production[0] ==Epsilon()))
+        self.point_Position = point_Position * (self.production !=tuple([Epsilon()]))
         self.isKernel = not self.point_Position is 0 or grammar.initialSymbol == self.nonTerminal 
 
     def __repr__(self):
@@ -66,3 +67,6 @@ class Item(state):
     
     def __hash__(self):
         return hash(self.nonTerminal) + hash(self.point_Position) + hash(self.production)
+    
+    def __eq__(self, other):
+        return self.production == other.production and self.point_Position == other.point_Position and self.nonTerminal == other.nonTerminal

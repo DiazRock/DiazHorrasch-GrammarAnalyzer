@@ -69,5 +69,11 @@ LL_Parser(G5).printTable()
 
 deleteInmediateLeftRecusrive(G6)
 
-refactorization(G7)
-print(G7)
+LR_Parser(G7).canonical_LR()
+''' it =  Item(label = "item", grammar= G5, nonTerminal= G5.initialSymbol, point_Position = 0, production= G5.nonTerminals[G5.initialSymbol])
+it2 = Item(label = "item", grammar= G5, nonTerminal= NoTerminal("X"), point_Position = 0, production= G5.nonTerminals[NoTerminal("X")])
+print (it)
+A1 = canonical_State (label = "I{0}".format(0), setOfItems = [it], grammar = G5)
+A2 = canonical_State (label = "I{0}".format(0), setOfItems = [it, it2], grammar = G5)
+print(A1.__eq__(A2))
+ '''
