@@ -52,6 +52,10 @@ G7 = GrammarClass(initialSymbol= "E", terminals= ['int', '*', '(', ')', '+'], no
 G7.addProduction("E", ['T'], ['T', '+','E'])
 G7.addProduction("T", ['int'], ['int', '*','T'], ['(', 'E' ,')'])
 
+G8 = GrammarClass(initialSymbol= "E", terminals= ['=', '+', 'i'], nonTerminals= ['E','A'])
+G8.addProduction("E", ['A', '=', 'A'], ['i'])
+G8.addProduction("A", ['i', '+', 'A'], ['i'])
+
 print (CalculateFirst(G))
 Firsts = CalculateFirst(G)
 print(CalculateFollow(G, Firsts), '\n')
@@ -69,7 +73,7 @@ LL_Parser(G5).printTable()
 
 deleteInmediateLeftRecusrive(G6)
 
-LR_Parser(G7).canonical_LR()
+LR_Parser(G8).canonical_LR(need_lookahead= True)
 ''' it =  Item(label = "item", grammar= G5, nonTerminal= G5.initialSymbol, point_Position = 0, production= G5.nonTerminals[G5.initialSymbol])
 it2 = Item(label = "item", grammar= G5, nonTerminal= NoTerminal("X"), point_Position = 0, production= G5.nonTerminals[NoTerminal("X")])
 print (it)

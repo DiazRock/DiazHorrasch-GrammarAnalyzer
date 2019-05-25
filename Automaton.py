@@ -63,10 +63,12 @@ class Item(state):
         self.isKernel = not self.point_Position is 0 or grammar.initialSymbol == self.nonTerminal 
 
     def __repr__(self):
-        return repr(self.nonTerminal) + "->" + repr(self.production[:self.point_Position]) + "." + repr (self.production[self.point_Position:])
-    
+        toReturn = repr(self.nonTerminal) + "->" + repr(self.production[:self.point_Position]) + "." + repr (self.production[self.point_Position:])
+        if self.label: toReturn += ", " + repr(self.label)
+        return toReturn
+
     def __hash__(self):
         return hash(self.nonTerminal) + hash(self.point_Position) + hash(self.production)
     
     def __eq__(self, other):
-        return self.production == other.production and self.point_Position == other.point_Position and self.nonTerminal == other.nonTerminal
+        return self.production == other.production and self.point_Position == other.point_Position and self.nonTerminal == other.nonTerminal and self.label == other.label

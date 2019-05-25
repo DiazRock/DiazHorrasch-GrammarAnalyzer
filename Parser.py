@@ -70,8 +70,8 @@ class LR_Parser(PredictiveParser):
         self.augmentedGrammar.terminals = grammar.terminals
         self.augmentedGrammar.nonTerminals = d
 
-    def canonical_LR(self):
-        initialState =canonical_State (label = "I{0}".format(0), setOfItems = [Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= self.augmentedGrammar.initialSymbol, point_Position = 0, production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol])], grammar = self.augmentedGrammar)          
+    def canonical_LR(self, need_lookahead = False):
+        initialState =canonical_State (label = "I{0}".format(0), setOfItems = [Item(label = FinalSymbol() if need_lookahead else None, grammar = self.augmentedGrammar, nonTerminal= self.augmentedGrammar.initialSymbol, point_Position = 0, production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol])], grammar = self.augmentedGrammar)          
         canonical_states = [initialState]
         statesQueue = [canonical_states[0]]
         transition_table = {}
@@ -95,7 +95,7 @@ class LR_Parser(PredictiveParser):
         for item in current_state.setOfItems:
             if item.point_Position < len(item.production):
                 if item.production[item.point_Position] == grammar_symbol:
-                    new_state.extend([Item(label = "item", grammar = self.augmentedGrammar, nonTerminal = item.nonTerminal, point_Position = item.point_Position + 1, production = item.production)])
+                    new_state.extend([Item(label = item.label, grammar = self.augmentedGrammar, nonTerminal = item.nonTerminal, point_Position = item.point_Position + 1, production = item.production)])
         return new_state
         
 
@@ -109,9 +109,12 @@ class LR_Parser(PredictiveParser):
                 X = current.production[current.point_Position]
                 if (isinstance(X, NoTerminal) and not visited[X]):
                     itemsToQueue = []
+                    looks_ahead = [ symbol for symbol in FirstsForBody(current.production[current.point_Position + 1:] + tuple([current.label]), self.Firsts) ] if current.label else [None]
+                    if Epsilon() in looks_ahead : looks_ahead = [Epsilon()]
                     for prod in self.augmentedGrammar.nonTerminals[X]:
-                        itemToAppend = Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= X, point_Position = 0, production = prod)
-                        itemsToQueue.append(itemToAppend)                        
+                        for token in looks_ahead:
+                            itemToAppend = Item(label = token, grammar = self.augmentedGrammar, nonTerminal= X, point_Position = 0, production = prod)
+                            itemsToQueue.append(itemToAppend)                        
                     itemsQueue.extend(itemsToQueue)
                     visited[X] = True
                     closure.extend(itemsToQueue)            
