@@ -56,6 +56,21 @@ G8 = GrammarClass(initialSymbol= "E", terminals= ['=', '+', 'i'], nonTerminals= 
 G8.addProduction("E", ['A', '=', 'A'], ['i'])
 G8.addProduction("A", ['i', '+', 'A'], ['i'])
 
+G9 = GrammarClass(initialSymbol= "E", terminals= ['-', '+', 'i', "(", ')'], nonTerminals= ['E','A', 'T'])
+G9.addProduction("E", ['E', 'A', 'T'], ['T'])
+G9.addProduction("A", ['+'], ['-'])
+G9.addProduction("T", ['(', 'E', ')'], ['i'])
+
+G10 = GrammarClass(initialSymbol= "E", terminals= ['i', '+', '[', "]", ','], nonTerminals= ['E','V', 'L'])
+G10.addProduction("E", ['E', '+', 'V'], ['V'])
+G10.addProduction("V", ['i'], ['i', '[','L',']'])
+G10.addProduction("L", ['L', ',', 'E'], ['E'])
+
+G11 = GrammarClass(initialSymbol= "S", terminals= ['i', '+', 'r'], nonTerminals= ['S','E'])
+G11.addProduction("S", ['E', 'r', 'E'], ['i'])
+G11.addProduction("E", ['E', '+', 'i'], ['i'])
+
+
 print (CalculateFirst(G))
 Firsts = CalculateFirst(G)
 print(CalculateFollow(G, Firsts), '\n')
@@ -73,7 +88,11 @@ LL_Parser(G5).printTable()
 
 deleteInmediateLeftRecusrive(G6)
 
-LR_Parser(G8).canonical_LR(need_lookahead= True)
+LR_Parser(G8).canonical_LR()
+LR_Parser(G9).canonical_LR()
+LR_Parser(G10).canonical_LR()
+
+LR_Parser(G11).canonical_LR(need_lookahead= True)
 ''' it =  Item(label = "item", grammar= G5, nonTerminal= G5.initialSymbol, point_Position = 0, production= G5.nonTerminals[G5.initialSymbol])
 it2 = Item(label = "item", grammar= G5, nonTerminal= NoTerminal("X"), point_Position = 0, production= G5.nonTerminals[NoTerminal("X")])
 print (it)
