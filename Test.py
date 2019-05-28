@@ -88,11 +88,13 @@ LL_Parser(G5).printTable()
 
 deleteInmediateLeftRecusrive(G6)
 
-LR_Parser(G8).canonical_LR()
-LR_Parser(G9).canonical_LR()
-LR_Parser(G10).canonical_LR()
+a = LR_Parser(G7).canonical_LR(need_lookahead= True)
+a = LR_Parser(G9).canonical_LR()
+a = LR_Parser(G10).canonical_LR()
 
-LR_Parser(G11).canonical_LR(need_lookahead= True)
+a = LR_Parser(G8).canonical_LR()
+print(a.error_message)
+a = LR_Parser(G11).canonical_LR()
 ''' it =  Item(label = "item", grammar= G5, nonTerminal= G5.initialSymbol, point_Position = 0, production= G5.nonTerminals[G5.initialSymbol])
 it2 = Item(label = "item", grammar= G5, nonTerminal= NoTerminal("X"), point_Position = 0, production= G5.nonTerminals[NoTerminal("X")])
 print (it)

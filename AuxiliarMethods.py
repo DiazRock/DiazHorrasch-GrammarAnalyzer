@@ -9,7 +9,7 @@ def CalculateFirst(G:GrammarClass):
     while(changed or not Firsts[G.initialSymbol]):
         for X in G.nonTerminals:            
             for prod in G.nonTerminals[X]:                          
-                if len(prod) ==1 and prod[0] == Epsilon():                    
+                if tuple(prod) == tuple([Epsilon()]):                    
                    changed = Add(Firsts[X], [Epsilon()])
                 else:
                     allEpsilon = True
