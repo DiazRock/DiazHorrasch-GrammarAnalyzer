@@ -38,8 +38,18 @@ class canonical_State(state):
         self.setOfItems.extend(otherList)
         self.kernel_items.extend(x for x in otherList if x.isKernel)
 
-    def __eq__(self, other):
-        return self.kernel_items == other.kernel_items
+    def __eq__(self, other, notLookLabel = False):
+        if not notLookLabel:
+            return self.kernel_items == other.kernel_items
+        if len(self.kernel_items) != len(other.kernel_items): return False
+        for x in self.kernel_items:
+            founded = False
+            for y in other.kernel_items:
+                if x.__eq__(y,notLookLabel):
+                    founded = True
+                    break
+            if not founded: return False
+        return True
 
     def __repr__(self):
         l = []
@@ -70,5 +80,5 @@ class Item(state):
     def __hash__(self):
         return hash(self.nonTerminal) + hash(self.point_Position) + hash(self.production)
     
-    def __eq__(self, other):
-        return self.production == other.production and self.point_Position == other.point_Position and self.nonTerminal == other.nonTerminal and self.label == other.label
+    def __eq__(self, other, notLookLabel = False):
+        return self.production == other.production and self.point_Position == other.point_Position and self.nonTerminal == other.nonTerminal and (self.label == other.label or notLookLabel)

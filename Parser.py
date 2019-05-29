@@ -79,24 +79,33 @@ class LR_Parser(PredictiveParser):
         canonical_states = [initialState]
         statesQueue = [canonical_states[0]]
         transition_table = {}
-        
+        reincident_states = []
+
         while (statesQueue):
             currentState = statesQueue.pop(0)
             currentState.setOfItems = (LR_Parser.closure(self, currentState.kernel_items))            
             symbols = {item.production[item.point_Position] for item in currentState.setOfItems if item.point_Position < len(item.production)}
-            for x in symbols:                
-                new_state = LR_Parser.goto(self, currentState, x, len(canonical_states))
-                if isinstance(new_state, Fail): return new_state                
-                if not new_state in canonical_states:
-                    canonical_states.append(new_state)
+            for x in symbols:
+                operation, new_state = LR_Parser.goto(self, canonical_states, currentState, x, need_lookahead is 2)
+                if isinstance(operation, Fail): 
+                    return operation
+                if operation :
                     statesQueue.append(new_state)
+                elif need_lookahead is 2:
+                    reincident_states.append(new_state)                
                 transition_table.update({(currentState, x): new_state})     
+        for reincident in reincident_states:
+            symbols = {item.production[item.point_Position] for item in reincident.setOfItems if item.point_Position < len(item.production)}
+            for x in symbols:
+                oper, recalculated = LR_Parser.goto(self, canonical_states, reincident, x, need_lookahead is 2)
+                if recalculated != transition_table[(reincident, x)]:
+                    return Fail("La gramática no es LALR(1), presenta indeterminación en el estado {0}, para el símbolo {1}".format(reincident, x))
 
         grammar_symbols = {x for x in self.augmentedGrammar.nonTerminals}.union(self.augmentedGrammar.terminals)        
         return Automaton(states = canonical_states, symbols = grammar_symbols, initialState =canonical_states[0], FinalStates = canonical_states, transitions = transition_table )            
 
-    def goto(self, current_state, grammar_symbol, index):
-        new_state = canonical_State(label = "I{0}".format(index), setOfItems = [], grammar = self.augmentedGrammar)
+    def goto(self, canonical_states, current_state, grammar_symbol, need_lookahead = False):
+        new_state = canonical_State(label = "I{0}".format(len(canonical_states)), setOfItems = [], grammar = self.augmentedGrammar)
         item_reduces = item_shifts = []
         for item in current_state.setOfItems:
             if item.point_Position < len(item.production):
@@ -108,21 +117,31 @@ class LR_Parser(PredictiveParser):
                     else:
                         item_shifts.append(to_extend)
 
+        notEqual = True
+        for state in canonical_states:
+            if state.__eq__ (new_state, need_lookahead):
+                notEqual = False
+                if not need_lookahead: return notEqual, new_state
+                state.setOfItems.extend(new_state.setOfItems)
+                state.label += '-' + new_state.label
+                return notEqual, state
+
         for item in item_reduces:
             #Buscando reduce-reduce
             for to_compare in item_reduces:
-                if Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= to_compare.nonTerminal, point_Position = to_compare.point_Position, production = to_compare.production) == Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= item.nonTerminal, point_Position = item.point_Position, production = item.production): continue
-                intersection = self.Follows[item.nonTerminal].intersection(self.Follows[to_compare.nonTerminal])
-                if item.production == to_compare.production and intersection:
-                    return Fail(error_message="Conflicto reduce-reduce para los items {0} y {1} al tener el símbolo de entrada {2} en el estado {3}".format(item, to_compare, item.production[item.point_Position-1], new_state))
+                if Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= to_compare.nonTerminal, point_Position = to_compare.point_Position, production = to_compare.production) == Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= item.nonTerminal, point_Position = item.point_Position, production = item.production): continue                
+                if item.production == to_compare.production and item.label == to_compare.label:
+                    return Fail(error_message="Conflicto reduce-reduce para los items {0} y {1} al tener el símbolo de entrada {2} en el estado {3} para el look-ahead {4}".format(item, to_compare, item.production[item.point_Position-1], new_state, item.label)), None
             #Buscando shift-reduce    
             for to_compare in item_shifts:
                 if item.production == to_compare.production[:item.point_Position -1]:
                     if isinstance (to_compare.production[item.point_Position], NoTerminal):
                          if item.production[item.point_Position] in self.Follows[to_compare.production[item.point_Position]]:
-                            return Fail(error_message="Conflicto shift-reduce para los items {0} y {1} al tener el símbolo de entrada {2} en el estado {3}".format(item, to_compare, item.production[item.point_Position-1], new_state))
+                            return Fail(error_message="Conflicto shift-reduce para los items {0} y {1} al tener el símbolo de entrada {2} en el estado {3}".format(item, to_compare, item.production[item.point_Position-1], new_state)), None
 
-        return new_state
+        if notEqual:
+            canonical_states.append(new_state)
+        return notEqual,new_state
         
 
     def closure(self, kernel_items):

@@ -94,7 +94,8 @@ a = LR_Parser(G10).canonical_LR()
 
 a = LR_Parser(G8).canonical_LR()
 print(a.error_message)
-a = LR_Parser(G11).canonical_LR()
+a = LR_Parser(G11).canonical_LR(need_lookahead = 2 )
+
 ''' it =  Item(label = "item", grammar= G5, nonTerminal= G5.initialSymbol, point_Position = 0, production= G5.nonTerminals[G5.initialSymbol])
 it2 = Item(label = "item", grammar= G5, nonTerminal= NoTerminal("X"), point_Position = 0, production= G5.nonTerminals[NoTerminal("X")])
 print (it)
