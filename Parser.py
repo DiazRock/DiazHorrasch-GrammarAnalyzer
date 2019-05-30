@@ -80,29 +80,45 @@ class LR_Parser(PredictiveParser):
         statesQueue = [canonical_states[0]]
         transition_table = {}
         
-        while (statesQueue):
-            currentState = statesQueue.pop(0)
+        while (statesQueue):            
+            otherCurrent = None
+            if not isinstance(statesQueue[0], tuple):
+                currentState = statesQueue.pop(0)
+            else:
+                currentState, otherCurrent = statesQueue.pop(0)
             currentState.setOfItems = (LR_Parser.closure(self, currentState.kernel_items))            
             symbols = {item.production[item.point_Position] for item in currentState.setOfItems if item.point_Position < len(item.production)}
             for x in symbols:                
                 new_state = LR_Parser.goto(self, currentState, x, len(canonical_states))
-                if isinstance(new_state, Fail): return new_state
-
+                if otherCurrent:
+                    if transition_table[(otherCurrent,x)] != new_state:
+                        return Fail("No se puede hacer la mezcla LALR, ya que hay indeterminismo para los estados {0}:{3} y {1}:{4} con el símbolo {2}".format(currentState, otherCurrent, x, new_state, transition_table[(otherCurrent, x)]))
+                    
                 founded = False
+                state_for_mixed = None
                 for state in canonical_states:
                     if state == new_state:
-                        if need_lookahead:
+                        if need_lookahead :
                             if state.equal_looksahead(new_state):
                                 founded = True
                             if founded:
                                 break
+                            state_for_mixed = state if need_lookahead is 2 else None
+                            if state_for_mixed: break
                         else:
                             founded = True
                             break                           
 
                 if not founded:
-                    canonical_states.append(new_state)
-                    statesQueue.append(new_state)
+                    if not state_for_mixed:
+                        canonical_states.append(new_state)
+                        statesQueue.append(new_state)
+                    else:
+                        statesQueue.append((new_state,state_for_mixed))
+                        for i in range(len(state_for_mixed.kernel_items)):
+                            state_for_mixed.kernel_items[i].label.update(new_state.kernel_items[i].label)
+                        state_for_mixed.label += "-" + new_state.label
+                
                 transition_table.update({(currentState, x): new_state})     
 
         grammar_symbols = {x for x in self.augmentedGrammar.nonTerminals}.union(self.augmentedGrammar.terminals)        
@@ -110,17 +126,14 @@ class LR_Parser(PredictiveParser):
 
     def goto(self, current_state, grammar_symbol, index):
         new_state = canonical_State(label = "I{0}".format(index), setOfItems = [], grammar = self.augmentedGrammar)
-        #item_reduces = item_shifts = []
+        
         for item in current_state.setOfItems:
             if item.point_Position < len(item.production):
                 if item.production[item.point_Position] == grammar_symbol:
-                    to_extend = Item(label = item.label, grammar = self.augmentedGrammar, nonTerminal = item.nonTerminal, point_Position = item.point_Position + 1, production = item.production)                    
+                    to_extend = Item(label = item.label.copy() if item.label else None, grammar = self.augmentedGrammar, nonTerminal = item.nonTerminal, point_Position = item.point_Position + 1, production = item.production)                    
                     new_state.extend([to_extend])
-                    ''' if to_extend.point_Position == len(to_extend.production):
-                        item_reduces.append(to_extend)
-                    else:
-                        item_shifts.append(to_extend)
- '''
+                    
+ 
         ''' for item in item_reduces:
             #Buscando reduce-reduce
             for to_compare in item_reduces:
@@ -158,7 +171,7 @@ class LR_Parser(PredictiveParser):
                 if (isinstance(X, NoTerminal)):
                     itemsToQueue = []
                     for prod in self.augmentedGrammar.nonTerminals[X]:
-                        itemToAppend = Item(label = looks_ahead, grammar = self.augmentedGrammar, nonTerminal= X, point_Position = 0, production = prod)
+                        itemToAppend = Item(label = looks_ahead.copy() if looks_ahead else None, grammar = self.augmentedGrammar, nonTerminal= X, point_Position = 0, production = prod)
                         founded = False
                         for item in closure:
                             if item == itemToAppend:
