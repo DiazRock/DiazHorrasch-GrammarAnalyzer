@@ -41,6 +41,14 @@ class canonical_State(state):
     def __eq__(self, other):
         return self.kernel_items == other.kernel_items
 
+    def equal_looksahead(self, other):
+        if not self.kernel_items and not other.kernel_items: return True
+        if self.kernel_items != other.kernel_items: return False
+        for x in self.kernel_items:
+            for y in other.kernel_items:
+                if x==y and x.label!=y.label: return False
+        return True
+
     def __repr__(self):
         l = []
         for x in self.setOfItems:
@@ -71,4 +79,7 @@ class Item(state):
         return hash(self.nonTerminal) + hash(self.point_Position) + hash(self.production)
     
     def __eq__(self, other):
-        return self.production == other.production and self.point_Position == other.point_Position and self.nonTerminal == other.nonTerminal and self.label == other.label
+        return self.production == other.production and self.point_Position == other.point_Position and self.nonTerminal == other.nonTerminal
+
+    def equal_look_ahead(self,other):
+        return self.label == other.label

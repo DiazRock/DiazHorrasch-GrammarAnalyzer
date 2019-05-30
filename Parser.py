@@ -86,8 +86,21 @@ class LR_Parser(PredictiveParser):
             symbols = {item.production[item.point_Position] for item in currentState.setOfItems if item.point_Position < len(item.production)}
             for x in symbols:                
                 new_state = LR_Parser.goto(self, currentState, x, len(canonical_states))
-                if isinstance(new_state, Fail): return new_state                
-                if not new_state in canonical_states:
+                if isinstance(new_state, Fail): return new_state
+
+                founded = False
+                for state in canonical_states:
+                    if state == new_state:
+                        if need_lookahead:
+                            if state.equal_looksahead(new_state):
+                                founded = True
+                            if founded:
+                                break
+                        else:
+                            founded = True
+                            break                           
+
+                if not founded:
                     canonical_states.append(new_state)
                     statesQueue.append(new_state)
                 transition_table.update({(currentState, x): new_state})     
@@ -97,18 +110,18 @@ class LR_Parser(PredictiveParser):
 
     def goto(self, current_state, grammar_symbol, index):
         new_state = canonical_State(label = "I{0}".format(index), setOfItems = [], grammar = self.augmentedGrammar)
-        item_reduces = item_shifts = []
+        #item_reduces = item_shifts = []
         for item in current_state.setOfItems:
             if item.point_Position < len(item.production):
                 if item.production[item.point_Position] == grammar_symbol:
                     to_extend = Item(label = item.label, grammar = self.augmentedGrammar, nonTerminal = item.nonTerminal, point_Position = item.point_Position + 1, production = item.production)                    
                     new_state.extend([to_extend])
-                    if to_extend.point_Position == len(to_extend.production):
+                    ''' if to_extend.point_Position == len(to_extend.production):
                         item_reduces.append(to_extend)
                     else:
                         item_shifts.append(to_extend)
-
-        for item in item_reduces:
+ '''
+        ''' for item in item_reduces:
             #Buscando reduce-reduce
             for to_compare in item_reduces:
                 if Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= to_compare.nonTerminal, point_Position = to_compare.point_Position, production = to_compare.production) == Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= item.nonTerminal, point_Position = item.point_Position, production = item.production): continue
@@ -121,7 +134,7 @@ class LR_Parser(PredictiveParser):
                     if isinstance (to_compare.production[item.point_Position], NoTerminal):
                          if item.production[item.point_Position] in self.Follows[to_compare.production[item.point_Position]]:
                             return Fail(error_message="Conflicto shift-reduce para los items {0} y {1} al tener el símbolo de entrada {2} en el estado {3}".format(item, to_compare, item.production[item.point_Position-1], new_state))
-
+ '''
         return new_state
         
 
@@ -132,21 +145,45 @@ class LR_Parser(PredictiveParser):
             current = itemsQueue.pop(0)
             if current.point_Position < len(current.production):
                 X = current.production[current.point_Position]
-                looks_ahead = { symbol for symbol in FirstsForBody(current.production[current.point_Position +1:] + tuple(current.label), self.Firsts) } if current.label else None
+
+                if current.label:
+                    looks_ahead = set()
+                    for ahead_symbol in current.label:
+                        to_update = FirstsForBody(current.production[current.point_Position +1:] + tuple([ahead_symbol]), self.Firsts)
+                        looks_ahead.update(to_update)
+                else:
+                    looks_ahead = None
+
                 if looks_ahead and Epsilon() in looks_ahead: looks_ahead = {current.label}
                 if (isinstance(X, NoTerminal)):
                     itemsToQueue = []
                     for prod in self.augmentedGrammar.nonTerminals[X]:
                         itemToAppend = Item(label = looks_ahead, grammar = self.augmentedGrammar, nonTerminal= X, point_Position = 0, production = prod)
-                        if not itemToAppend in closure:
-                            itemsToQueue.append(itemToAppend)                        
+                        founded = False
+                        for item in closure:
+                            if item == itemToAppend:
+                                if item.label: item.label.update(itemToAppend.label)
+                                founded = True                                
+                        if not founded:
+                            itemsToQueue.append(itemToAppend)
+                                                                           
                     itemsQueue.extend(itemsToQueue)                    
                     closure.extend(itemsToQueue)            
         return closure
 
     def LALR(self):
-        LR_Automaton = LR_Parser.canonical_LR(self,need_lookahead= True)
+        pass
+    '''     LR_Automaton = LR_Parser.canonical_LR(self,need_lookahead= True)
         if isinstance(LR_Automaton, Fail): return LR_Automaton
+        mask = [False for i in range(len(LR_Automaton.states))]
+        LALR_states = []
+        for i in range(len(LR_Automaton.states)):
+            if mask[i]: continue
+            mask[i] = True
+            for j in range(i+1, len(LR_Automaton.states)):
+                if LR_Automaton.states[i] '''
+                    
+
 
 
 class Fail:
