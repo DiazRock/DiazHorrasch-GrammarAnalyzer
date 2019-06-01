@@ -71,6 +71,19 @@ G11.addProduction("S", ['E', 'r', 'E'], ['i'])
 G11.addProduction("E", ['E', '+', 'i'], ['i'])
 
 
+G12 = GrammarClass(initialSymbol= "S", terminals= ['a', 'b', 'c'], nonTerminals= ['S','A', 'X', 'B'])
+G12.addProduction("S", ['A', 'X'])
+G12.addProduction("A", ['a', 'A'], ['œ'])
+G12.addProduction("X", ['b', 'B'], ['c', 'B'])
+G12.addProduction("B", ['œ'], ['X'])
+
+G13 = GrammarClass(initialSymbol= "S", terminals= ['i', '+', '[',']', '='], nonTerminals= ['S','V', 'A', 'E'])
+G13.addProduction("S", ['V', '=','E'], ['i'])
+G13.addProduction("V", ['i'], ['A','[','E',']'])
+G13.addProduction("A", ['i'])
+G13.addProduction("E", ['E','+','V'], ['V'])
+
+
 print (CalculateFirst(G))
 Firsts = CalculateFirst(G)
 print(CalculateFollow(G, Firsts), '\n')
@@ -94,3 +107,10 @@ a = LR_Parser(G10).canonical_LR()
 
 a = LR_Parser(G8).canonical_LR()
 a = LR_Parser(G11).canonical_LR(need_lookahead = 2)
+
+a = LR_Parser(G12).canonical_LR()
+a = LR_Parser(G12).canonical_LR(need_lookahead = True)
+a = LR_Parser(G12).canonical_LR(need_lookahead = 2)
+
+a = LR_Parser(G13).canonical_LR(need_lookahead = True)
+a = LR_Parser(G13).canonical_LR(need_lookahead = 2)

@@ -104,7 +104,8 @@ class LR_Parser(PredictiveParser):
                             if founded:
                                 break
                             state_for_mixed = state if need_lookahead is 2 else None
-                            if state_for_mixed: break
+                            if state_for_mixed: 
+                                break
                         else:
                             founded = True
                             break                           
@@ -114,10 +115,14 @@ class LR_Parser(PredictiveParser):
                         canonical_states.append(new_state)
                         statesQueue.append(new_state)
                     else:
-                        statesQueue.append((new_state,state_for_mixed))
+                        changed = False
                         for i in range(len(state_for_mixed.kernel_items)):
+                            before = len(state_for_mixed.kernel_items[i].label)
                             state_for_mixed.kernel_items[i].label.update(new_state.kernel_items[i].label)
-                        state_for_mixed.label += "-" + new_state.label
+                            changed = not before == len(state_for_mixed.kernel_items[i].label)
+                        if changed:    
+                            state_for_mixed.label += "-" + new_state.label
+                            statesQueue.append((new_state,state_for_mixed))
                 
                 transition_table.update({(currentState, x): new_state})     
 
@@ -131,23 +136,7 @@ class LR_Parser(PredictiveParser):
             if item.point_Position < len(item.production):
                 if item.production[item.point_Position] == grammar_symbol:
                     to_extend = Item(label = item.label.copy() if item.label else None, grammar = self.augmentedGrammar, nonTerminal = item.nonTerminal, point_Position = item.point_Position + 1, production = item.production)                    
-                    new_state.extend([to_extend])
-                    
- 
-        ''' for item in item_reduces:
-            #Buscando reduce-reduce
-            for to_compare in item_reduces:
-                if Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= to_compare.nonTerminal, point_Position = to_compare.point_Position, production = to_compare.production) == Item(label = "item", grammar = self.augmentedGrammar, nonTerminal= item.nonTerminal, point_Position = item.point_Position, production = item.production): continue
-                intersection = self.Follows[item.nonTerminal].intersection(self.Follows[to_compare.nonTerminal])
-                if item.production == to_compare.production and intersection:
-                    return Fail(error_message="Conflicto reduce-reduce para los items {0} y {1} al tener el símbolo de entrada {2} en el estado {3}".format(item, to_compare, item.production[item.point_Position-1], new_state))
-            #Buscando shift-reduce    
-            for to_compare in item_shifts:
-                if item.production == to_compare.production[:item.point_Position -1]:
-                    if isinstance (to_compare.production[item.point_Position], NoTerminal):
-                         if item.production[item.point_Position] in self.Follows[to_compare.production[item.point_Position]]:
-                            return Fail(error_message="Conflicto shift-reduce para los items {0} y {1} al tener el símbolo de entrada {2} en el estado {3}".format(item, to_compare, item.production[item.point_Position-1], new_state))
- '''
+                    new_state.extend([to_extend])        
         return new_state
         
 
@@ -171,7 +160,7 @@ class LR_Parser(PredictiveParser):
                 if (isinstance(X, NoTerminal)):
                     itemsToQueue = []
                     for prod in self.augmentedGrammar.nonTerminals[X]:
-                        itemToAppend = Item(label = looks_ahead.copy() if looks_ahead else None, grammar = self.augmentedGrammar, nonTerminal= X, point_Position = 0, production = prod)
+                        itemToAppend = Item(label = looks_ahead.copy() if looks_ahead else None, grammar = self.augmentedGrammar, nonTerminal= X, point_Position = 0, production = prod if prod != tuple([Epsilon()]) else ())
                         founded = False
                         for item in closure:
                             if item == itemToAppend:
@@ -184,21 +173,82 @@ class LR_Parser(PredictiveParser):
                     closure.extend(itemsToQueue)            
         return closure
 
-    def LALR(self):
-        pass
-    '''     LR_Automaton = LR_Parser.canonical_LR(self,need_lookahead= True)
-        if isinstance(LR_Automaton, Fail): return LR_Automaton
-        mask = [False for i in range(len(LR_Automaton.states))]
-        LALR_states = []
-        for i in range(len(LR_Automaton.states)):
-            if mask[i]: continue
-            mask[i] = True
-            for j in range(i+1, len(LR_Automaton.states)):
-                if LR_Automaton.states[i] '''
-                    
+    def buildTable(self, parser_type = 0):        
+        LR_Automaton = LR_Parser.canonical_LR(self, parser_type)
+        inputSymbols = self.augmentedGrammar.terminals.union(self.augmentedGrammar.nonTerminals).union({FinalSymbol()})
+        table = {(state,symbol):[] for state in LR_Automaton.states for symbol in inputSymbols}
+        conflict_info = {state:[] for state in LR_Automaton.states}
+        was_conflict = False
+        for state in LR_Automaton.states:
+            for item in state.setOfItems:
+                shift_reduce_conflict = reduce_reduce_conflict = False
+                conflict_symbol = None
+                if item.point_Position < len(item.production):
+                    symbol = item.production[item.point_Position]
+                    shift_reduce_conflict = table[(state, symbol)]
+                    conflict_symbol = symbol                                          
+                    table[(state,symbol)] = shift(table_tuple = tuple([state,symbol]), response = item, label = "S" + LR_Automaton.transitions[(state, symbol)].label[1:] if isinstance(symbol, Terminal) else LR_Automaton.transitions[(state, symbol)].label )
 
-
+                else:
+                    looks_ahead = self.Follows[item.nonTerminal] if not parser_type else item.label
+                    for symbol in looks_ahead:
+                        if table[state,symbol]:
+                            conflict_symbol = symbol
+                            if isinstance(table[state,symbol], shift):
+                                shift_reduce_conflict = table[state,symbol]
+                            else:
+                                reduce_reduce_conflict = table[state, symbol]
+                        
+                        table[state,symbol] = reduce(table_tuple = (state, symbol), response = item, label = repr(item)) 
+                        
+                if shift_reduce_conflict:
+                    was_conflict = True
+                    conflict_info[state].append(shift_reduce_fail(shift_decision = shift_reduce_conflict, reduce_decision = table[state,symbol], conflict_symbol = conflict_symbol))
+                if reduce_reduce_conflict:
+                    was_conflict = True
+                    conflict_info[state].append(reduce_reduce_fail(reduce_decision1 = reduce_reduce_conflict, reduce_decision2 = table[state,symbol], conflict_symbol = conflict_symbol))
+        return table, conflict_info, was_conflict
 
 class Fail:
     def __init__(self, error_message):
         self.error_message = error_message
+
+    def __repr__(self):
+        return self.error_message
+                
+class automaton_fail(Fail):
+    def __init__(self, fail_type, decision1, decision2, conflict_symbol):
+        self.decision1 = decision1
+        self.decision2 = decision2
+        self.conflict_symbol = conflict_symbol
+        self.error_message = "Conflicto {3} entre las decisiones {0} y {1} para el símbolo {2}".format(decision1, decision2 , conflict_symbol, fail_type)
+
+class shift_reduce_fail(Fail):
+    def __init__(self, shift_decision, reduce_decision, conflict_symbol):
+        super().__init__(fail_type = "shift-reduce", decision1= shift_decision, decision2 = reduce_decision, conflict_symbol = conflict_symbol)
+
+class reduce_reduce_fail(Fail):
+    def __init__(self, reduce_decision1, reduce_decision2, conflict_symbol):
+        super().__init__(fail_type = "reduce-reduce", decision1= reduce_decision1, decision2 = reduce_decision2, conflict_symbol = conflict_symbol)
+
+class Action:
+    def __init__(self, table_tuple, response, label):
+        self.table_tuple = table_tuple
+        self.response = response
+        self.label = label
+
+    def __repr__(self):
+        return self.label
+
+class reduce(Action):
+    pass
+
+class shift(Action):
+    pass
+
+class accept(Action):
+    pass
+
+class error(Action, Fail):
+    pass
+
