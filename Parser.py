@@ -116,8 +116,9 @@ class LR_Parser(PredictiveParser):
                 currentState = statesQueue.pop(0)
             else:
                 currentState, otherCurrent = statesQueue.pop(0)
-            currentState.setOfItems = (LR_Parser.closure(self, currentState.kernel_items))            
-            symbols = {item.production[item.point_Position] for item in currentState.setOfItems if item.point_Position < len(item.production)}
+            currentState.setOfItems = (LR_Parser.closure(self, currentState.kernel_items))
+            symbols = []            
+            {symbols.append (item.production[item.point_Position]) for item in currentState.setOfItems if item.point_Position < len(item.production) and not item.production[item.point_Position] in symbols}
             for x in symbols:                
                 new_state = LR_Parser.goto(self, currentState, x, len(canonical_states))
                 if otherCurrent:
@@ -280,11 +281,11 @@ class automaton_fail(Fail):
         self.conflict_symbol = conflict_symbol
         self.error_message = "Conflicto {3} entre las decisiones {0} y {1} para el símbolo {2}".format(decision1, decision2 , conflict_symbol, fail_type)
 
-class shift_reduce_fail(Fail):
+class shift_reduce_fail(automaton_fail):
     def __init__(self, shift_decision, reduce_decision, conflict_symbol):
         super().__init__(fail_type = "shift-reduce", decision1= shift_decision, decision2 = reduce_decision, conflict_symbol = conflict_symbol)
 
-class reduce_reduce_fail(Fail):
+class reduce_reduce_fail(automaton_fail):
     def __init__(self, reduce_decision1, reduce_decision2, conflict_symbol):
         super().__init__(fail_type = "reduce-reduce", decision1= reduce_decision1, decision2 = reduce_decision2, conflict_symbol = conflict_symbol)
 

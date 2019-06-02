@@ -119,4 +119,59 @@ def commonPreffix(prod1, prod2):
     for i in range(min(len(prod1), len(prod2))):
         if(prod1[i] != prod2[i]):
             return prod1[:i]
-    return prod1[:min(len(prod1), len(prod2))]        
+    return prod1[:min(len(prod1), len(prod2))]
+
+
+def cleanGrammar(grammar:GrammarClass):
+    generable = {x:True for x in grammar.terminals}
+    generable.update({x:False for x in grammar.nonTerminals})
+    reachable = {x:False for x in grammar.terminals}
+    reachable.update({x:False for x in grammar.nonTerminals})
+    DFS(grammar.initialSymbol, {x:False if not x ==  grammar.initialSymbol else True for x in grammar.nonTerminals}, reachable, generable)
+    not_reachable_prod_set = {}
+    not_generable_prod_set = {}
+    for x in grammar.nonTerminals:
+        for prod in grammar.nonTerminals[x]:
+            was_generable_conflict = False
+            was_reachable_conflict = False
+            for symbol in prod:
+                if not generable[x]:
+                    if not was_generable_conflict:
+                        not_generable_prod_set.update({(x,prod): [symbol]})
+                        was_generable_conflict = True
+                    else:
+                        not_generable_prod_set[x,prod].append(symbol)
+                    
+                if not reachable[x]:
+                    if not was_reachable_conflict:
+                        was_reachable_conflict = True
+                        not_reachable_prod_set.update({(x,prod) : [symbol]})
+                    else:
+                        not_reachable_prod_set[(x,prod)].append(symbol)
+            if was_generable_conflict or was_reachable_conflict:
+                grammar.nonTerminals[x].remove(prod)
+                for symbol in not_reachable_prod_set[x,prod]:
+                    if isinstance(symbol, Terminal):
+                        grammar.terminals.remove(symbol)
+                    else:
+                        grammar.nonTerminals.pop(symbol)
+                for symbol in not_generable_prod_set[x,prod]:
+                    if isinstance(symbol, Terminal):
+                        grammar.terminals.remove(symbol)
+                    else:
+                        grammar.nonTerminals.pop(symbol)
+                        
+    return  not_generable_prod_set, not_reachable_prod_set                   
+                
+
+def DFS(current, visited, reachable, generable):
+    for prod in current.productions:
+        allgenerable = True
+        for symbol in prod:
+            reachable[symbol] = True
+            if isinstance(symbol, NoTerminal) and not visited[symbol]:
+                visited[symbol] = True
+                DFS(symbol, visited, reachable, generable)
+            allgenerable = generable[symbol]
+    generable[current] = allgenerable
+        
