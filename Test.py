@@ -101,16 +101,16 @@ LL_Parser(G5).printTable()
 
 deleteInmediateLeftRecusrive(G6)
 
-a = LR_Parser(G7).canonical_LR(need_lookahead= True)
-a = LR_Parser(G9).canonical_LR()
-a = LR_Parser(G10).canonical_LR()
+a = LR_Parser(G7)
+a = LR_Parser(G9)
+a = LR_Parser(G10)
 
-a = LR_Parser(G8).canonical_LR()
-a = LR_Parser(G11).canonical_LR(need_lookahead = 2)
+a = LR_Parser(G8)
+a = LR_Parser(G11)
 
-a = LR_Parser(G12).canonical_LR()
-a = LR_Parser(G12).canonical_LR(need_lookahead = True)
-a = LR_Parser(G12).canonical_LR(need_lookahead = 2)
+a = LR_Parser(G12)
+a = LR_Parser(G12, parse_type=1)
+a = LR_Parser(G12, parse_type= 2)
 
-a = LR_Parser(G13).canonical_LR(need_lookahead = True)
-a = LR_Parser(G13).canonical_LR(need_lookahead = 2)
+a = LR_Parser(G13, parse_type= True)
+a = LR_Parser(G13, parse_type= 2)

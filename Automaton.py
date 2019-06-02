@@ -83,3 +83,15 @@ class Item(state):
 
     def equal_look_ahead(self,other):
         return self.label == other.label
+
+
+class Tree:
+    def __init__(self, label, children = [], parent = None):
+        self.label = label
+        self.children = children
+        self.parent = parent
+
+    def append(self, child):
+        self.children.append(child)
+
+    

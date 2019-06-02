@@ -19,20 +19,49 @@ class PredictiveParser(Parser):
 
 class LL_Parser(PredictiveParser):
     def buildTable(self):
-        table = {(x,y):[] for x in self.symbolsForStack.keys() for y in self.inputSymbols}
+        table = {(x,y):[] for x in self.symbolsForStack for y in self.inputSymbols}
         for X in self.symbolsForStack:
             for prod in self.symbolsForStack[X]:
                 if len(prod) == 1 and prod[0] == Epsilon():
                     for t in self.Follows[X]:
-                        if not self.Asign(table, X, t, prod):return None
+                        a = self.Asign(table, X, t, prod), Fail
+                        if isinstance (a, Fail):return a
                 else:
                     for t in self.Firsts[prod]:
                         if t == Epsilon():
                             for terminal in self.Follows[X]:
-                                if not self.Asign(table, X, terminal, prod): return None
+                                a = self.Asign(table, X, terminal, prod)
+                                if isinstance(a,Fail): return a
                         else:
-                            if not self.Asign(table, X, t, prod): return None
+                            a = self.Asign(table, X, t, prod)
+                            if isinstance(a, Fail) : return a
         return table
+
+    def parse_tree(self, tokens):
+        index_tokens= 0
+        derivation_tree = Tree(label = self.initialSymbol, children = [], parent = None)        
+        stack_symbols = [self.initialSymbol, derivation_tree]        
+
+        while(stack_symbols and index_tokens < len(tokens)):
+            symbol, current_tree = stack_symbols.pop()
+            if isinstance(symbol, Terminal):
+                if not tokens[index_tokens] == symbol:
+                    return Fail("Error, la cadena {0} no pertenece al lenguaje generado por la gramática".format(tokens))
+
+            index_tokens += 1
+            if isinstance(symbol, NoTerminal):
+                prod = self.table[symbol, tokens[index_tokens]]                
+                if not prod:
+                    return Fail("Error, la cadena {0} no pertenece al lenguaje generado por la gramática".format(tokens))
+
+                node_to_push = Tree(label = prod, children = [], parent = current_tree)
+                current_tree.append(node_to_push)    
+                for i in range(len(prod) - 1, -1, -1):
+                    stack_symbols.append(prod[i], node_to_push)
+                
+        if not (not stack_symbols and index_tokens == len(tokens)):
+            return Fail("Error, la cadena {0} no pertenece al lenguaje.".format(tokens))
+        return derivation_tree
 
     def printTable(self):
         print(end ='\t')
@@ -50,19 +79,19 @@ class LL_Parser(PredictiveParser):
             table[(symbolForStack, inputSymbol)] = prod
             return True
         else:
-            print ("Error, la gramática no es LL(1):\nConflictos a la hora de escoger entre las decisiones {0} y {1} para el terminal {2}".format(
-                (symbolForStack,table[(symbolForStack, inputSymbol)]), (symbolForStack, prod), inputSymbol))
-            return False
+            return Fail("Error, la gramática no es LL(1):\nConflictos a la hora de escoger entre las decisiones {0} y {1} para el terminal {2}".format(
+                (symbolForStack,table[(symbolForStack, inputSymbol)]), (symbolForStack, prod), inputSymbol))            
         
     def __init__(self, grammar):
         super().__init__(grammar)
-        self.symbolsForStack = grammar.nonTerminals.copy()         
+        self.initialSymbol = grammar.initialSymbol
+        self.symbolsForStack = grammar.nonTerminals          
         self.table = self.buildTable()
         
 class LR_Parser(PredictiveParser):
-    def __init__(self, grammar:GrammarClass):
+    def __init__(self, grammar:GrammarClass, parse_type = 0):
         super().__init__(grammar)
-        self.stack = []
+        
         initialSymbol = NoTerminal(name = grammar.initialSymbol.name + "'")                
         d = {initialSymbol : [tuple([grammar.initialSymbol])]}
         d.update(grammar.nonTerminals)
@@ -72,7 +101,8 @@ class LR_Parser(PredictiveParser):
         self.augmentedGrammar.nonTerminals = d
         self.Firsts = CalculateFirst(self.augmentedGrammar)
         self.Follows = CalculateFollow(self.augmentedGrammar, self.Firsts)
-        
+        self.LR_Automaton = LR_Parser.canonical_LR(self, need_lookahead=parse_type)
+        self.table, self.conflict_info, self.was_conflict = LR_Parser.buildTable(self, parser_type = parse_type, automaton = self.LR_Automaton)
 
     def canonical_LR(self, need_lookahead = False):
         initialState =canonical_State (label = "I{0}".format(0), setOfItems = [Item(label = {FinalSymbol()} if need_lookahead else None, grammar = self.augmentedGrammar, nonTerminal= self.augmentedGrammar.initialSymbol, point_Position = 0, production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol][0])], grammar = self.augmentedGrammar)          
@@ -173,25 +203,33 @@ class LR_Parser(PredictiveParser):
                     closure.extend(itemsToQueue)            
         return closure
 
-    def buildTable(self, parser_type = 0):        
-        LR_Automaton = LR_Parser.canonical_LR(self, parser_type)
+    def buildTable(self, parser_type, automaton):                
         inputSymbols = self.augmentedGrammar.terminals.union(self.augmentedGrammar.nonTerminals).union({FinalSymbol()})
-        table = {(state,symbol):[] for state in LR_Automaton.states for symbol in inputSymbols}
-        conflict_info = {state:[] for state in LR_Automaton.states}
+        table = {(state,symbol):[] for state in automaton.states for symbol in inputSymbols}
+        conflict_info = {state:[] for state in automaton.states}
         was_conflict = False
-        for state in LR_Automaton.states:
+        for state in automaton.states:
             for item in state.setOfItems:
+                
                 shift_reduce_conflict = reduce_reduce_conflict = False
                 conflict_symbol = None
                 if item.point_Position < len(item.production):
                     symbol = item.production[item.point_Position]
-                    shift_reduce_conflict = table[(state, symbol)]
-                    conflict_symbol = symbol                                          
-                    table[(state,symbol)] = shift(table_tuple = tuple([state,symbol]), response = item, label = "S" + LR_Automaton.transitions[(state, symbol)].label[1:] if isinstance(symbol, Terminal) else LR_Automaton.transitions[(state, symbol)].label )
+                    if isinstance(table[(state, symbol)], reduce):
+                        shift_reduce_conflict = table[(state, symbol)]
+
+                    conflict_symbol = symbol
+                    response_state = automaton.transitions[(state, symbol)]                                        
+                    table[(state,symbol)] = shift(table_tuple = tuple([state,symbol]), response = response_state, label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )
 
                 else:
                     looks_ahead = self.Follows[item.nonTerminal] if not parser_type else item.label
-                    for symbol in looks_ahead:
+                    if item.nonTerminal == self.augmentedGrammar.initialSymbol and item.production == tuple([NoTerminal(item.nonTerminal.name[:len(item.nonTerminal.name) - 1])]):
+                        if not parser_type or FinalSymbol() in looks_ahead:
+                            if FinalSymbol() == symbol:
+                                table[state, symbol] = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
+                        
+                    for symbol in looks_ahead:                        
                         if table[state,symbol]:
                             conflict_symbol = symbol
                             if isinstance(table[state,symbol], shift):
@@ -199,7 +237,7 @@ class LR_Parser(PredictiveParser):
                             else:
                                 reduce_reduce_conflict = table[state, symbol]
                         
-                        table[state,symbol] = reduce(table_tuple = (state, symbol), response = item, label = repr(item)) 
+                        table[state,symbol] = reduce(table_tuple = (state, symbol), response = len(item.production), label = item) 
                         
                 if shift_reduce_conflict:
                     was_conflict = True
@@ -207,7 +245,28 @@ class LR_Parser(PredictiveParser):
                 if reduce_reduce_conflict:
                     was_conflict = True
                     conflict_info[state].append(reduce_reduce_fail(reduce_decision1 = reduce_reduce_conflict, reduce_decision2 = table[state,symbol], conflict_symbol = conflict_symbol))
+
         return table, conflict_info, was_conflict
+
+    def parser_tree(self, tokens):
+        stack_states = [self.LR_Automaton.initialState]
+        stack_trees = []
+        for i in tokens:
+            action = self.table([stack_states[-1], i])
+            if not action:
+                return Fail("La cadena {0} no pertenece al lenguaje".format(tokens))
+            elif isinstance(action, shift):
+                stack_states.append(action.response)
+                stack_trees.append(Tree(label = i))
+            elif isinstance(action, reduce):
+                children = []
+                for i in range(action.response + 1):
+                    stack_states.pop()
+                    children.append(stack_trees.pop())
+                stack_trees.append(Tree(label = action.response.nonTerminal, children=children))
+        return stack_trees.pop()
+
+    
 
 class Fail:
     def __init__(self, error_message):
@@ -238,7 +297,7 @@ class Action:
         self.label = label
 
     def __repr__(self):
-        return self.label
+        return repr(self.label)
 
 class reduce(Action):
     pass
