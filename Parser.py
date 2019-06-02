@@ -224,10 +224,6 @@ class LR_Parser(PredictiveParser):
 
                 else:
                     looks_ahead = self.Follows[item.nonTerminal] if not parser_type else item.label
-                    if item.nonTerminal == self.augmentedGrammar.initialSymbol and item.production == tuple([NoTerminal(item.nonTerminal.name[:len(item.nonTerminal.name) - 1])]):
-                        if not parser_type or FinalSymbol() in looks_ahead:
-                            if FinalSymbol() == symbol:
-                                table[state, symbol] = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
                         
                     for symbol in looks_ahead:                        
                         if table[state,symbol]:
@@ -236,8 +232,10 @@ class LR_Parser(PredictiveParser):
                                 shift_reduce_conflict = table[state,symbol]
                             else:
                                 reduce_reduce_conflict = table[state, symbol]
-                        
-                        table[state,symbol] = reduce(table_tuple = (state, symbol), response = len(item.production), label = item) 
+                        if symbol == FinalSymbol() and item.nonTerminal == self.augmentedGrammar.initialSymbol and item.production == tuple([NoTerminal(item.nonTerminal.name[:len(item.nonTerminal.name) - 1])]):
+                            table[state, symbol] = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
+                        else:
+                            table[state,symbol] = reduce(table_tuple = (state, symbol), response = len(item.production), label = item) 
                         
                 if shift_reduce_conflict:
                     was_conflict = True
