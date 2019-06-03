@@ -14,6 +14,9 @@ class Automaton:
     def accept(self):
         return self.currentState in self.FinalStates
 
+    #Esto lo convierte en un epsilon-automata.
+    def add_transition(self, state_out, symbol, state_in):
+        self.transitions.update({(state_in,state_out) : symbol})
     
 
 
@@ -24,6 +27,9 @@ class state:
 
     def __equal__(self,other):
         return self.label == other.label
+    
+    def __hash__(self):
+        return hash(self.label)
 
 
 class canonical_State(state):    
@@ -94,4 +100,9 @@ class Tree:
     def append(self, child):
         self.children.append(child)
 
+class regularExpr:
+    def __init__(self, rule):
+        self.rule = rule        
     
+    def __repr__(self):
+        string = ''

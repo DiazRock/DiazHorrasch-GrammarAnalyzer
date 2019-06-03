@@ -1,5 +1,5 @@
 from Grammar import *
-
+from Automaton import *
 
 def CalculateFirst(G:GrammarClass):
     Firsts = {x:{x} for x in G.terminals}
@@ -160,7 +160,7 @@ def cleanGrammar(grammar:GrammarClass):
                         grammar.terminals.remove(symbol)
                     else:
                         grammar.nonTerminals.pop(symbol)
-                        
+
     return  not_generable_prod_set, not_reachable_prod_set                   
                 
 
@@ -174,4 +174,38 @@ def DFS(current, visited, reachable, generable):
                 DFS(symbol, visited, reachable, generable)
             allgenerable = generable[symbol]
     generable[current] = allgenerable
-        
+
+def delete_unit_productions(grammar: GrammarClass):
+    changed = False
+    initial = True
+    while changed or initial:
+        initial = changed = False
+        for x in grammar.nonTerminals:
+            for prod in grammar.nonTerminals[x]:
+                if len(prod) is 1 and isinstance(prod[0], NoTerminal):
+                    changed = True
+                    grammar.nonTerminals[x] += grammar.nonTerminals[prod[0]]
+                    grammar.nonTerminals.pop(prod[0])
+
+def convert_grammar_to_automaton(grammar: GrammarClass):
+    delete_unit_productions(grammar)
+    automaton_states = [state(label = x, grammar = grammar) for x in grammar.nonTerminals]
+    automaton = Automaton(states = automaton_states, symbols = {}, initialState = automaton_states[0], FinalStates = {}, transitions = {})
+    for state in automaton_states:
+        for prod in grammar.nonTerminals[state.label]:            
+            if isinstance(prod[-1], NoTerminal):
+                automaton.symbols.update({prod[:len(prod)-1]})                
+                automaton.add_transition(state_in = state, symbol= prod[:len(prod)-1], state_out = prod[-1])
+            else:
+                automaton.FinalStates.update({state})
+                if not prod == tuple([Epsilon()]):
+                    automaton.add_transition(state_in = state, symbol = prod, state_out = state)
+                    automaton.symbols.update({prod})
+    return automaton
+
+def regular_expresion_from_automaton(automaton: Automaton):
+    pass
+
+def initialize_table(automaton: Automaton):
+    
+    pass
