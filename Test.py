@@ -83,6 +83,11 @@ G13.addProduction("V", ['i'], ['A','[','E',']'])
 G13.addProduction("A", ['i'])
 G13.addProduction("E", ['E','+','V'], ['V'])
 
+G14 = GrammarClass(initialSymbol= "A0", terminals= ['a', 'b'], nonTerminals= ['A0','A1', 'A2'])
+G14.addProduction("A0", ['a', 'A0'], ['b', 'A0'], ['a', 'A1'])
+G14.addProduction("A1", ['b', 'A2'])
+G14.addProduction("A2", ['b'])
+
 
 print (CalculateFirst(G))
 Firsts = CalculateFirst(G)
@@ -114,3 +119,7 @@ a = LR_Parser(G12, parse_type= 2)
 
 a = LR_Parser(G13, parse_type= True)
 a = LR_Parser(G13, parse_type= 2)
+
+
+a = convert_grammar_to_automaton(G14)
+a = regular_expresion_from_automaton(a)

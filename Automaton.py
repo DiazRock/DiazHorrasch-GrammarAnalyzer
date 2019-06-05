@@ -14,9 +14,12 @@ class Automaton:
     def accept(self):
         return self.currentState in self.FinalStates
 
-    #Esto lo convierte en un epsilon-automata.
+    
     def add_transition(self, state_out, symbol, state_in):
-        self.transitions.update({(state_in,state_out) : symbol})
+        if not (state_out, symbol) in self.transitions :
+            self.transitions.update({(state_out, symbol) : state_in})
+        else:
+            self.transitions[state_out, symbol] =state(label = [self.transitions[state_out, symbol]] + [state_in], grammar= state_out.grammar)  
     
 
 
@@ -30,6 +33,9 @@ class state:
     
     def __hash__(self):
         return hash(self.label)
+
+    def __repr__(self):
+        return repr(self.label)
 
 
 class canonical_State(state):    
@@ -101,8 +107,29 @@ class Tree:
         self.children.append(child)
 
 class regularExpr:
-    def __init__(self, rule):
-        self.rule = rule        
-    
+    def __init__(self, left = None, right = None, isClosure = False, isUnion = False, isLeaf = False, symbol = None):
+        if isLeaf:
+            self.left=self.right =None            
+            self.isUnion = False
+            self.symbol = symbol            
+        else:
+            self.left = left
+            self.right = right
+            self.isUnion = isUnion
+            if self.isUnion:
+                self.symbol = self.left.symbol + '|' + self.right.symbol
+            else:
+                self.symbol = self.left.symbol + self.right.symbol
+
+        self.isClosure = isClosure            
+        if self.isUnion or self.isClosure:
+            self.symbol = '(' + self.symbol + ')'
+        if self.isClosure and not(self.symbol[-1] == '*'):
+            self.symbol += '*'            
+
     def __repr__(self):
-        string = ''
+        return repr(self.symbol)
+    def toClosure(self):
+        self.isClosure = True
+        if not self.symbol[-1] == '*' and not self.symbol == '':
+            self.symbol += '*'

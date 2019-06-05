@@ -73,13 +73,15 @@ def deleteInmediateLeftRecusrive(G:GrammarClass):
     G.nonTerminals.update(nonRecusriveSet)
 
 def refactorization(G:GrammarClass):
-    while True:            
-        commonPrefixForNonTerminal = {}
+    commonPrefixForNonTerminal = {}
+    changed = True
+    while changed:
+        changed = False
         for X in G.nonTerminals:
             G.nonTerminals[X], temp = refactorNonTerminal(X, G.nonTerminals[X])
-            if not temp: return 
+            if temp : changed = True
             commonPrefixForNonTerminal.update(temp)
-        G.nonTerminals.update(commonPrefixForNonTerminal)                   
+    G.nonTerminals.update(commonPrefixForNonTerminal)                   
             
 def refactorNonTerminal(X: NoTerminal, productions):
     
@@ -96,8 +98,8 @@ def refactorNonTerminal(X: NoTerminal, productions):
             representativeNonTerminal = preffixForProduction[productions[j]][1]
             if len(preffixForProduction[productions[i]][0]) < len(commonPref):
                 preffixForProduction[productions[i]] = (commonPref, representativeNonTerminal)
-                
-            preffixForProduction[productions[j]] = (commonPref, representativeNonTerminal)
+            if len(preffixForProduction[productions[j]][0]) < len(commonPref):
+                preffixForProduction[productions[j]] = (commonPref, representativeNonTerminal)
     
     newProductionsForX = []
     newNonTerminals = {}
@@ -188,24 +190,92 @@ def delete_unit_productions(grammar: GrammarClass):
                     grammar.nonTerminals.pop(prod[0])
 
 def convert_grammar_to_automaton(grammar: GrammarClass):
-    delete_unit_productions(grammar)
-    automaton_states = [state(label = x, grammar = grammar) for x in grammar.nonTerminals]
-    automaton = Automaton(states = automaton_states, symbols = {}, initialState = automaton_states[0], FinalStates = {}, transitions = {})
+    refactorization(grammar)
+    automaton_states = {x: state(label = x, grammar = grammar) for x in grammar.nonTerminals}
     for state in automaton_states:
-        for prod in grammar.nonTerminals[state.label]:            
+        state.label = [state]
+    automaton = Automaton(states = list(automaton_states.values()), symbols = set(), initialState = automaton_states[grammar.initialSymbol], FinalStates = set(), transitions = {})
+    for current_state in automaton.states:
+        for prod in grammar.nonTerminals[current_state.label]:
+            string = ''
             if isinstance(prod[-1], NoTerminal):
-                automaton.symbols.update({prod[:len(prod)-1]})                
-                automaton.add_transition(state_in = state, symbol= prod[:len(prod)-1], state_out = prod[-1])
+                if not len(prod) == 1:
+                    for x in prod[:-1]:
+                        string += repr(x)
+                else:
+                    string = Epsilon()            
+                automaton.symbols.update({string})                
+                automaton.add_transition(state_out = current_state, symbol= string, state_in =automaton_states[prod[-1]])
             else:
-                automaton.FinalStates.update({state})
+                for x in prod:
+                    string += repr(x)            
+                automaton.FinalStates.update({current_state})
                 if not prod == tuple([Epsilon()]):
-                    automaton.add_transition(state_in = state, symbol = prod, state_out = state)
-                    automaton.symbols.update({prod})
+                    automaton.add_transition(state_out = current_state, symbol = string, state_in = current_state)
+                    automaton.symbols.update({string})
     return automaton
 
+def from_epsilonNFA_to_DFA(automaton: Automaton):
+    initial, isFinalState = epsilon_closure(automaton,automaton.initialState)
+    DFA_states = {epsilon_closure(automaton,automaton.initialState)}
+    DFA_transitions = {}
+    queue = [initial]
+    finalStates = [] 
+    while queue:
+        current_state = queue.pop()
+        if isFinalState: finalStates.append(current_state)
+        for symbol in automaton.symbols:
+            state_to_enqueue, isFinalState = epsilon_closure(automaton,move(automaton, current_state, symbol))
+            before = len(DFA_states)
+            DFA_states.update({state_to_enqueue})
+            if not before == len(DFA_states):
+                queue.append(state_to_enqueue)
+            DFA_transitions.update({(current_state, symbol): state_to_enqueue})
+
+    return Automaton(states = list(DFA_states),symbols = automaton.symbols, initialState = initial, FinalStates = finalStates, transitions = DFA_transitions)
+    
+def move(automaton, current_state, symbol):
+    superState = state(label =[ ], grammar = current_state.grammar)
+    for s in current_state:
+        if (s,symbol) in automaton.transitions:
+            for i in automaton.transitions[s, symbol]:
+                for x in i.label:
+                    superState.label.append(x)
+    return superState
+def epsilon_closure(automaton: Automaton, superState:state):
+    e_closure = stack = [state_in_super for state_in_super in superState.label]
+    isFinalState = False
+    while stack:
+        current_state = stack.pop()
+        isFinalState = current_state in automaton.FinalStates
+        for u in automaton.transitions[current_state, Epsilon()].label:
+            if not u in e_closure:
+                e_closure.append(u)
+                stack.append(u)
+    return e_closure, isFinalState
+    
 def regular_expresion_from_automaton(automaton: Automaton):
-    pass
+    dp = initialize_table(automaton)
+    for k in range(len(automaton.states)):
+        for i in range(len(automaton.states)):
+            for j in range(len(automaton.states)):
+                state_i, state_j, state_k = automaton.states[i],automaton.states[j], automaton.states[k]
+                dp[state_i, state_j] = regularExpr(isUnion=True, left = dp[state_i,state_j], right= regularExpr(left= dp[state_i,state_k], right= regularExpr(left=dp[state_k,state_k].toClosure(), right= dp[k,j])))
+
+    expr = regularExpr(isLeaf=True, symbol= '')
+    for i in range(len(automaton.states)):
+        if(not dp[automaton.states[0],automaton.states[i]].symbol == ''):
+            expr = regularExpr(left = expr, right=dp[automaton.states[0], automaton.states[i]], isUnion= True)
+    return expr
 
 def initialize_table(automaton: Automaton):
-    
-    pass
+    table_toReturn = {(state_i, state_j): regularExpr(isLeaf=True, symbol='') for state_i in automaton.states for state_j in automaton.states}
+    for state_out in automaton.states:
+        for symbol in automaton.symbols:
+            if (state_out,symbol) in automaton.transitions:
+                state_in = automaton.transitions[state, symbol]
+                if table_toReturn[state_out, state_in].symbol == '':
+                    table_toReturn[state_out, state_in] = regularExpr(isLeaf=True, symbol= symbol)
+                else:
+                    table_toReturn[state_out, state_in] = regularExpr(isUnion=True, left = table_toReturn[state_out, state_in], right= regularExpr(isLeaf=True, symbol = symbol))
+    return table_toReturn
