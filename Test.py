@@ -122,4 +122,16 @@ a = LR_Parser(G13, parse_type= 2)
 
 
 a = convert_grammar_to_automaton(G14)
-a = regular_expresion_from_automaton(a)
+a = from_epsilonNFA_to_DFA(a)
+q0 = state(label = 'q0')
+q1 = state(label = 'q1')
+q2 = state(label = 'q2' )
+a1 = Automaton(states = [q0, q1, q2], symbols = {'a', 'b'}, initialState = q0, FinalStates = {q0 }, transitions = { (q0, 'a' ): q1, (q0, 'b'): q2, (q1, 'a'): q2, (q1, 'b'):q0, (q2, "a"): q0, (q2, 'b'): q1 } )
+#(a)*b(cc)*
+a2 = Automaton(states = [q0, q1, q2], symbols = {'a', 'b', 'c'}, initialState = q0, FinalStates = {q1 }, transitions = { (q0, 'a' ): q0, (q0, 'b'): q1, (q1, 'c'): q2, (q2, 'c'): q1} )
+#b|(ac)
+a3 = Automaton(states = [q0, q1, q2], symbols = {'a', 'b', 'c'}, initialState = q0, FinalStates = {q2 }, transitions = { (q0, 'a' ): q1, (q0, 'b'): q2, (q1, 'c'): q2 } )
+e1 = brzozowski_dfa_to_regexp(a1)
+e2 = brzozowski_dfa_to_regexp(a2)
+e3 = brzozowski_dfa_to_regexp(a3)
+e3 = regular_expresion_from_automaton(a3)

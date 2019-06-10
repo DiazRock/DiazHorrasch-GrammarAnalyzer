@@ -190,92 +190,130 @@ def delete_unit_productions(grammar: GrammarClass):
                     grammar.nonTerminals.pop(prod[0])
 
 def convert_grammar_to_automaton(grammar: GrammarClass):
-    refactorization(grammar)
-    automaton_states = {x: state(label = x, grammar = grammar) for x in grammar.nonTerminals}
-    for state in automaton_states:
-        state.label = [state]
-    automaton = Automaton(states = list(automaton_states.values()), symbols = set(), initialState = automaton_states[grammar.initialSymbol], FinalStates = set(), transitions = {})
-    for current_state in automaton.states:
-        for prod in grammar.nonTerminals[current_state.label]:
-            string = ''
+    refactorization (grammar )
+    automaton_states = {x: state(label = x) for x in grammar.nonTerminals}
+
+    automaton = Automaton(states = list(automaton_states.values()), symbols = set(), initialState = automaton_states[grammar.initialSymbol], FinalStates = set(), transitions = {})     
+    for nonTerminal in automaton_states:
+        for prod in grammar.nonTerminals[nonTerminal]:
+            symbol = ''
+            state_input = None
             if isinstance(prod[-1], NoTerminal):
                 if not len(prod) == 1:
                     for x in prod[:-1]:
-                        string += repr(x)
+                        symbol += repr(x)
+                    automaton.symbols.update( {symbol} )
                 else:
-                    string = Epsilon()            
-                automaton.symbols.update({string})                
-                automaton.add_transition(state_out = current_state, symbol= string, state_in =automaton_states[prod[-1]])
+                    symbol = Epsilon()
+                state_input = automaton_states[prod[-1]]
             else:
                 for x in prod:
-                    string += repr(x)            
-                automaton.FinalStates.update({current_state})
-                if not prod == tuple([Epsilon()]):
-                    automaton.add_transition(state_out = current_state, symbol = string, state_in = current_state)
-                    automaton.symbols.update({string})
+                    symbol += repr( x )
+                if not prod == tuple([Epsilon() ] ):
+                    state_input = state( label = NoTerminal (automaton_states[nonTerminal].label.name + "_" + str(len(automaton.states))) )
+                    automaton.FinalStates.update({state_input})
+                    automaton.states.append( state_input )                    
+                    automaton.symbols.update({symbol})
+                else:
+                    automaton.FinalStates.update( {automaton_states[nonTerminal]} )
+                    continue
+
+            if not (automaton_states[nonTerminal], symbol) in automaton.transitions:             
+                automaton.transitions.update({(automaton_states[nonTerminal], symbol): [ state_input ] } )
+            else:
+                automaton.transitions[automaton_states[nonTerminal], symbol] += [ state_input ]
+    
     return automaton
 
 def from_epsilonNFA_to_DFA(automaton: Automaton):
+
     initial, isFinalState = epsilon_closure(automaton,automaton.initialState)
-    DFA_states = {epsilon_closure(automaton,automaton.initialState)}
+    DFA_states = [initial]
     DFA_transitions = {}
     queue = [initial]
-    finalStates = [] 
-    while queue:
-        current_state = queue.pop()
-        if isFinalState: finalStates.append(current_state)
-        for symbol in automaton.symbols:
-            state_to_enqueue, isFinalState = epsilon_closure(automaton,move(automaton, current_state, symbol))
-            before = len(DFA_states)
-            DFA_states.update({state_to_enqueue})
-            if not before == len(DFA_states):
-                queue.append(state_to_enqueue)
-            DFA_transitions.update({(current_state, symbol): state_to_enqueue})
+    finalStates = []
 
-    return Automaton(states = list(DFA_states),symbols = automaton.symbols, initialState = initial, FinalStates = finalStates, transitions = DFA_transitions)
+    if isFinalState: 
+        finalStates.append(initial)
+    while queue:
+        current_state = queue.pop()        
+        for symbol in automaton.symbols:             
+            state_to_enqueue = move(automaton, current_state, symbol) 
+            if state_to_enqueue.label:
+                state_to_enqueue, isFinalState = epsilon_closure(automaton, state_to_enqueue)
+                DFA_transitions.update({(current_state, symbol): state_to_enqueue})
+                if not state_to_enqueue in DFA_states:                    
+                    queue.append(state_to_enqueue)
+                    DFA_states.append(state_to_enqueue)
+                    if isFinalState: 
+                        finalStates.append(current_state)
+    
+
+    return Automaton(states = DFA_states, symbols = automaton.symbols, initialState = initial, FinalStates = finalStates, transitions = DFA_transitions)
     
 def move(automaton, current_state, symbol):
-    superState = state(label =[ ], grammar = current_state.grammar)
-    for s in current_state:
-        if (s,symbol) in automaton.transitions:
-            for i in automaton.transitions[s, symbol]:
-                for x in i.label:
-                    superState.label.append(x)
+    superState = state(label =tuple())
+    setStates = current_state.label
+    for s in setStates:                
+        if (s, symbol ) in automaton.transitions:
+            superState.label += tuple (automaton.transitions[s, symbol])
     return superState
-def epsilon_closure(automaton: Automaton, superState:state):
-    e_closure = stack = [state_in_super for state_in_super in superState.label]
+
+def epsilon_closure(automaton: Automaton, superState:state):    
+    e_closure = state(label = tuple([superState]) if isinstance(superState.label, NoTerminal) else superState.label) 
+    stack = list (e_closure.label)
     isFinalState = False
     while stack:
         current_state = stack.pop()
         isFinalState = current_state in automaton.FinalStates
-        for u in automaton.transitions[current_state, Epsilon()].label:
-            if not u in e_closure:
-                e_closure.append(u)
-                stack.append(u)
-    return e_closure, isFinalState
+        if (current_state, Epsilon() ) in automaton.transitions:
+            for u in automaton.transitions[ current_state, Epsilon()]:
+                if not u in e_closure.label:
+                    e_closure.label += tuple( [u] )
+                    stack.append(u)
+    return e_closure , isFinalState
     
 def regular_expresion_from_automaton(automaton: Automaton):
     dp = initialize_table(automaton)
-    for k in range(len(automaton.states)):
-        for i in range(len(automaton.states)):
-            for j in range(len(automaton.states)):
+    for k in range(len(automaton.states )):
+        current_dp = dp.copy()
+        for i in range(len( automaton.states) ):
+            for j in range( len(automaton.states) ):
                 state_i, state_j, state_k = automaton.states[i],automaton.states[j], automaton.states[k]
-                dp[state_i, state_j] = regularExpr(isUnion=True, left = dp[state_i,state_j], right= regularExpr(left= dp[state_i,state_k], right= regularExpr(left=dp[state_k,state_k].toClosure(), right= dp[k,j])))
+                dp[state_i, state_j] += current_dp[state_i,state_k].concat(current_dp[state_k,state_k].toClosure()).concat(current_dp[state_k, state_j])
 
-    expr = regularExpr(isLeaf=True, symbol= '')
-    for i in range(len(automaton.states)):
-        if(not dp[automaton.states[0],automaton.states[i]].symbol == ''):
-            expr = regularExpr(left = expr, right=dp[automaton.states[0], automaton.states[i]], isUnion= True)
+    expr = emptyRegExp()
+    for i in range(len(automaton.states)):        
+        expr += dp[automaton.states[0], automaton.states[i]]
     return expr
 
 def initialize_table(automaton: Automaton):
-    table_toReturn = {(state_i, state_j): regularExpr(isLeaf=True, symbol='') for state_i in automaton.states for state_j in automaton.states}
+    table_toReturn = {(state_i, state_j): epsilonRegExp() for state_i in automaton.states for state_j in automaton.states}
     for state_out in automaton.states:
         for symbol in automaton.symbols:
             if (state_out,symbol) in automaton.transitions:
-                state_in = automaton.transitions[state, symbol]
-                if table_toReturn[state_out, state_in].symbol == '':
+                state_in = automaton.transitions[state_out, symbol]
+                if isinstance (table_toReturn[state_out, state_in], epsilonRegExp):
                     table_toReturn[state_out, state_in] = regularExpr(isLeaf=True, symbol= symbol)
                 else:
-                    table_toReturn[state_out, state_in] = regularExpr(isUnion=True, left = table_toReturn[state_out, state_in], right= regularExpr(isLeaf=True, symbol = symbol))
+                    table_toReturn[state_out, state_in] += regularExpr(isLeaf=True, symbol = symbol)
     return table_toReturn
+
+def brzozowski_dfa_to_regexp(automaton: Automaton):
+    B = [ epsilonRegExp() if s in automaton.FinalStates else emptyRegExp() for s in automaton.states]
+    A = {(si,sj): emptyRegExp() for si in automaton.states for sj in automaton.states}
+    for s in automaton.states:
+        for symbol in automaton.symbols:
+            if (s, symbol) in automaton.transitions:
+                A[s, automaton.transitions[s, symbol]] += regularExpr(symbol= symbol, isLeaf = True)
+    for n in range(len(automaton.states) - 1, -1, -1):
+        B[n] = A[automaton.states[n], automaton.states[n]].toClosure().concat(B[n])
+        for j in range(n):
+            A[automaton.states[n], automaton.states[j]] = A[automaton.states[n], automaton.states[n]].toClosure().concat(A[automaton.states[n], automaton.states[j]])
+        for i in range(n):
+            B[i] += A[automaton.states[i], automaton.states[n]].concat(B[n])
+            for j in range(n):
+                A[automaton.states[i], automaton.states[j]] += A[automaton.states[i], automaton.states[n]].concat(A[automaton.states[n], automaton.states[j]])
+        
+    return B[0]
+    

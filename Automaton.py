@@ -17,25 +17,24 @@ class Automaton:
     
     def add_transition(self, state_out, symbol, state_in):
         if not (state_out, symbol) in self.transitions :
-            self.transitions.update({(state_out, symbol) : state_in})
+            self.transitions.update({(state_out, symbol) : state_in })
         else:
-            self.transitions[state_out, symbol] =state(label = [self.transitions[state_out, symbol]] + [state_in], grammar= state_out.grammar)  
+            self.transitions[state_out, symbol] =state(label = self.transitions [state_out, symbol].label  + state_in.label  )  
     
 
 
 class state:
-    def __init__(self, label, grammar: GrammarClass):
-        self.label = label
-        self.grammar = grammar
+    def __init__(self, label):
+        self.label = label        
 
-    def __equal__(self,other):
+    def __eq__(self,other):
         return self.label == other.label
     
     def __hash__(self):
         return hash(self.label)
 
     def __repr__(self):
-        return repr(self.label)
+        return "state: !" + repr(self.label) + "!"
 
 
 class canonical_State(state):    
@@ -76,7 +75,7 @@ class canonical_State(state):
 
 class Item(state):
     def __init__(self, label, grammar:GrammarClass, nonTerminal, point_Position, production):
-        super().__init__(label, grammar)
+        super().__init__(label)
         self.nonTerminal = nonTerminal
         self.production = production
         self.point_Position = point_Position * (self.production !=tuple([Epsilon()]))
@@ -108,28 +107,78 @@ class Tree:
 
 class regularExpr:
     def __init__(self, left = None, right = None, isClosure = False, isUnion = False, isLeaf = False, symbol = None):
-        if isLeaf:
-            self.left=self.right =None            
-            self.isUnion = False
-            self.symbol = symbol            
+        self.isLeaf = isLeaf
+        if self.isLeaf:
+            self.left = self.right = None            
         else:
             self.left = left
-            self.right = right
-            self.isUnion = isUnion
-            if self.isUnion:
-                self.symbol = self.left.symbol + '|' + self.right.symbol
-            else:
-                self.symbol = self.left.symbol + self.right.symbol
-
-        self.isClosure = isClosure            
-        if self.isUnion or self.isClosure:
-            self.symbol = '(' + self.symbol + ')'
-        if self.isClosure and not(self.symbol[-1] == '*'):
-            self.symbol += '*'            
-
+            self.right = right 
+            
+        self.symbol = symbol
+        self.isClosure = isClosure
+        self.isUnion = isUnion
+        if self.isClosure:
+            if not isUnion:
+                self.symbol = '(' + self.symbol + ')'
+            if not self.symbol[-1] =='*':
+                self.symbol += '*'
+    
     def __repr__(self):
         return repr(self.symbol)
+
+    def __add__(self, other):
+        if self == other:
+            return self
+        if isinstance(other, specialRegExp):
+            return self
+        return regularExpr(left = self, right = other, symbol = '(' + self.symbol + '|' + other.symbol +')', isUnion = True)
+
+    def concat(self, other):
+        if isinstance(other, epsilonRegExp):
+            return self
+        if isinstance(other, emptyRegExp):
+            return other
+        return regularExpr(left = self, right = other, symbol= self.symbol + other.symbol)
+        
     def toClosure(self):
-        self.isClosure = True
-        if not self.symbol[-1] == '*' and not self.symbol == '':
-            self.symbol += '*'
+        if not isinstance(self, specialRegExp):         
+            return regularExpr(left = self.left, right = self.right, isClosure = True, symbol = self.symbol, isLeaf = self.isLeaf, isUnion=self.isUnion)
+        return epsilonRegExp()
+
+    
+    def __eq__(self,other):
+        return self.symbol == other.symbol
+    
+
+class specialRegExp(regularExpr):
+    def __init__(self, symbol):
+        self.isClosure = self.isUnion = False
+        self.isLeaf = True
+        self.symbol = symbol
+        self.left = None
+        self.right = None
+
+    def __add__(self, other):
+        return other
+
+    def concat (self, other):
+        return other
+
+class emptyRegExp (specialRegExp):
+    def __init__(self ):
+        super().__init__(symbol = 'ø')
+
+    def concat(self, other):
+        return self
+
+class epsilonRegExp (specialRegExp):
+    def __init__(self):
+        super().__init__(symbol = 'œ')
+
+    def __add__(self, other):
+        if isinstance(other, emptyRegExp):
+            return self
+        return other
+
+    def concat(self, other):        
+        return other
