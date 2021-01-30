@@ -121,7 +121,7 @@ a = LR_Parser(G13, parse_type= True)
 a = LR_Parser(G13, parse_type= 2)
 
 
-a = convert_grammar_to_automaton(G14)
+''' a = convert_grammar_to_automaton(G14)
 a = from_epsilonNFA_to_DFA(a)
 q0 = state(label = 'q0')
 q1 = state(label = 'q1')
@@ -135,3 +135,4 @@ e1 = brzozowski_dfa_to_regexp(a1)
 e2 = brzozowski_dfa_to_regexp(a2)
 e3 = brzozowski_dfa_to_regexp(a3)
 e3 = regular_expresion_from_automaton(a3)
+ '''

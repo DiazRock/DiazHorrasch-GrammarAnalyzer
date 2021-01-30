@@ -29,15 +29,32 @@ class NoTerminal(GrammarSymbol):
 class GrammarClass:
     def __init__(self, initialSymbol, terminals, nonTerminals):
         self.terminals = {Terminal(x) for x in terminals}
-        self.nonTerminals = {NoTerminal(x): [] for x in nonTerminals}
+        if isinstance(nonTerminals, list): 
+            self.nonTerminals = {NoTerminal(x): [] for x in nonTerminals}
+        else:
+            self.nonTerminals = nonTerminals
         self.initialSymbol = NoTerminal(name = initialSymbol)
         self.LeftRecSet = []
+        self.isRegular = True
+
     def __repr__(self):
-        return "S: {0}\nT: {1}\nNT: {2}".format(self.initialSymbol, self.terminals, self.nonTerminals)
+        toReturn = ""
+        for x in self.nonTerminals:
+            toReturn += repr(x) + ' -> '
+            passed = False
+            for prod in self.nonTerminals[x]:
+                if passed:
+                    toReturn += ' |'
+                for symbol in prod:
+                    toReturn += ' ' +repr(symbol)
+                passed = True
+
+            toReturn += '\n'
+
+        return toReturn[:-1]
 
     def addProduction(self, noTerminal, *productions):
         for production in productions:
             self.nonTerminals[NoTerminal(noTerminal)].append(tuple([NoTerminal(name = x) if NoTerminal(x) in self.nonTerminals else Terminal(x) for x in production]))
             if noTerminal == production[0]: self.LeftRecSet.append(NoTerminal(noTerminal))
-                                
-
+            self.isRegular = not noTerminal in production[:-1]

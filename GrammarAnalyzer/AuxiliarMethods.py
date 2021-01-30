@@ -1,5 +1,5 @@
-from Grammar import *
-from Automaton import *
+from GrammarAnalyzer.Grammar import *
+from GrammarAnalyzer.Automaton import *
 
 def CalculateFirst(G:GrammarClass):
     Firsts = {x:{x} for x in G.terminals}
@@ -125,55 +125,35 @@ def commonPreffix(prod1, prod2):
 
 
 def cleanGrammar(grammar:GrammarClass):
-    generable = {x:True for x in grammar.terminals}
-    generable.update({x:False for x in grammar.nonTerminals})
-    reachable = {x:False for x in grammar.terminals}
-    reachable.update({x:False for x in grammar.nonTerminals})
-    DFS(grammar.initialSymbol, {x:False if not x ==  grammar.initialSymbol else True for x in grammar.nonTerminals}, reachable, generable)
-    not_reachable_prod_set = {}
-    not_generable_prod_set = {}
-    for x in grammar.nonTerminals:
+    generable = { x: True for x in grammar.terminals.union({Epsilon()}) }
+    generable.update( { x: False for x in grammar.nonTerminals } )
+    reachable = { x: False for x in grammar.terminals }
+    reachable.update( { x : False if not x == grammar.initialSymbol else True for x in grammar.nonTerminals } )
+    DFS(grammar, grammar.initialSymbol, { x: False if not x ==  grammar.initialSymbol else True for x in grammar.nonTerminals }, reachable, generable)
+    not_reachable_prod_set = [x for x in grammar.terminals if not reachable[x]] + [x for x in grammar.nonTerminals if not reachable[x]]
+    not_generable_prod_set = [x for x in grammar.nonTerminals if not generable[x]]
+    new_grammar = GrammarClass ( initialSymbol = grammar.initialSymbol.name, terminals =[terminal.name for terminal in grammar.terminals if reachable[terminal] ], nonTerminals = [X.name for X in grammar.nonTerminals if reachable[X] and generable[X]] )
+    for x in new_grammar.nonTerminals:
         for prod in grammar.nonTerminals[x]:
-            was_generable_conflict = False
-            was_reachable_conflict = False
-            for symbol in prod:
-                if not generable[x]:
-                    if not was_generable_conflict:
-                        not_generable_prod_set.update({(x,prod): [symbol]})
-                        was_generable_conflict = True
-                    else:
-                        not_generable_prod_set[x,prod].append(symbol)
-                    
-                if not reachable[x]:
-                    if not was_reachable_conflict:
-                        was_reachable_conflict = True
-                        not_reachable_prod_set.update({(x,prod) : [symbol]})
-                    else:
-                        not_reachable_prod_set[(x,prod)].append(symbol)
-            if was_generable_conflict or was_reachable_conflict:
-                grammar.nonTerminals[x].remove(prod)
-                for symbol in not_reachable_prod_set[x,prod]:
-                    if isinstance(symbol, Terminal):
-                        grammar.terminals.remove(symbol)
-                    else:
-                        grammar.nonTerminals.pop(symbol)
-                for symbol in not_generable_prod_set[x,prod]:
-                    if isinstance(symbol, Terminal):
-                        grammar.terminals.remove(symbol)
-                    else:
-                        grammar.nonTerminals.pop(symbol)
+            if notProp(reachable, prod) or notProp (generable, prod):
+                continue
+            new_grammar.addProduction(x.name, [symbol.name for symbol in prod])
 
-    return  not_generable_prod_set, not_reachable_prod_set                   
-                
+    return  not_generable_prod_set, not_reachable_prod_set, new_grammar
 
-def DFS(current, visited, reachable, generable):
-    for prod in current.productions:
+def notProp(setProp, prod):
+    for x in prod:
+        if not setProp[x]: return True
+    return False
+
+def DFS(grammar, current, visited, reachable, generable):
+    for prod in grammar.nonTerminals [current]:
         allgenerable = True
         for symbol in prod:
             reachable[symbol] = True
             if isinstance(symbol, NoTerminal) and not visited[symbol]:
                 visited[symbol] = True
-                DFS(symbol, visited, reachable, generable)
+                DFS(grammar, symbol, visited, reachable, generable)
             allgenerable = generable[symbol]
     generable[current] = allgenerable
 
@@ -184,7 +164,7 @@ def delete_unit_productions(grammar: GrammarClass):
         initial = changed = False
         for x in grammar.nonTerminals:
             for prod in grammar.nonTerminals[x]:
-                if len(prod) is 1 and isinstance(prod[0], NoTerminal):
+                if len(prod) == 1 and isinstance(prod[0], NoTerminal):
                     changed = True
                     grammar.nonTerminals[x] += grammar.nonTerminals[prod[0]]
                     grammar.nonTerminals.pop(prod[0])
@@ -316,4 +296,4 @@ def brzozowski_dfa_to_regexp(automaton: Automaton):
                 A[automaton.states[i], automaton.states[j]] += A[automaton.states[i], automaton.states[n]].concat(A[automaton.states[n], automaton.states[j]])
         
     return B[0]
-    
+
