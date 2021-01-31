@@ -8,6 +8,7 @@ class GrammarSymbol:
     def __repr__(self):
         return self.name
 
+    __str__ = __repr__
     def __eq__(self, other):
         if other is None: return False        
         return self.name == other.name
@@ -53,6 +54,7 @@ class GrammarClass:
 
         return toReturn[:-1]
 
+    __str__ = __repr__
     def addProduction(self, noTerminal, *productions):
         for production in productions:
             self.nonTerminals[NoTerminal(noTerminal)].append(tuple([NoTerminal(name = x) if NoTerminal(x) in self.nonTerminals else Terminal(x) for x in production]))

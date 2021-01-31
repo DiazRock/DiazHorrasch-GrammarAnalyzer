@@ -47,19 +47,21 @@ class LL_Parser(PredictiveParser):
 		index_tokens= 0
 		derivation_tree = Tree(label = self.initialSymbol, children = [], parent = None)
 		stack_symbols = [(self.initialSymbol, derivation_tree)]        
-
+		column_tracking= 1
+		row_tracking= 1
 		while(stack_symbols and index_tokens < len(tokens)):
 			symbol, current_tree = stack_symbols.pop()
 
 			if isinstance(symbol, Terminal):
 				if not tokens[index_tokens] == symbol:
-					return Fail("Error, la cadena {0} no pertenece al lenguaje generado por la gramática".format(tokens))
+					return Fail("({0}, {1}): Syntax error at or near {2}".format(row_tracking, column_tracking, tokens[index_tokens]))
 				index_tokens += 1
+				column_tracking += 1
 
 			if isinstance(symbol, NoTerminal):
 				prod = self.table[symbol, tokens[index_tokens]]
 				if not prod:
-					return Fail("Error, la cadena {0} no pertenece al lenguaje generado por la gramática".format(tokens))
+					return Fail("({0}, {1}): Syntax error at or near {2}".format(row_tracking, column_tracking, tokens[index_tokens]))
 
 				node_to_push = Tree(label = prod, children = [], parent = current_tree)
 				current_tree.children.append(node_to_push)
@@ -67,8 +69,13 @@ class LL_Parser(PredictiveParser):
 					if prod[i] != Epsilon():
 						stack_symbols.append((prod[i], node_to_push))
 
+			
+			if symbol.name == '\n':
+				row_tracking += 1
+				column_tracking = 1
+
 		if not (not stack_symbols and index_tokens == len(tokens)):
-			return Fail("Error, la cadena {0} no pertenece al lenguaje.".format(tokens))
+			return Fail("({0}, {1}): Syntax error at or near {2}".format(row_tracking, column_tracking, tokens[index_tokens]))
 		return derivation_tree
 
 	def printTable(self):
@@ -87,8 +94,8 @@ class LL_Parser(PredictiveParser):
 			table[(symbolForStack, inputSymbol)] = prod
 			return True
 		else:
-			return Fail("Error, la gramática no es LL(1):\nConflictos a la hora de escoger entre las decisiones {0} y {1} para el terminal {2}".format(
-				(symbolForStack,table[(symbolForStack, inputSymbol)]), (symbolForStack, prod), inputSymbol))            
+			return Fail("Grammar is not LL(1):\nConflict between {0} y {1} for terminal {2}".format(
+				(symbolForStack,table[(symbolForStack, inputSymbol)]), (symbolForStack, prod), inputSymbol))
 		
 	
 		
@@ -277,7 +284,9 @@ class Fail:
 
 	def __repr__(self):
 		return self.error_message
-				
+	
+	__str__ = __repr__	
+		
 class automaton_fail(Fail):
 	def __init__(self, fail_type, decision1, decision2, conflict_symbol):
 		self.decision1 = decision1

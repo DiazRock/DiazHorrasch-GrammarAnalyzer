@@ -6,6 +6,7 @@ import plotly
 from GrammarAnalyzer.Grammar import GrammarClass,Terminal
 import GrammarAnalyzer.AuxiliarMethods as am
 import GrammarAnalyzer.Parser as parser
+import GrammarAnalyzer.Automaton as automaton
 import utils
 
 def main():
@@ -54,6 +55,13 @@ def main():
 			if not_reachable_prod_set:
 				'The following non terminals are not reachables %s' %not_reachable_prod_set
 
+		if g.LeftRecSet:
+			'The following non terminals have left recursive productions %s' %new_g.LeftRecSet
+			am.deleteInmediateLeftRecusrive(new_g)
+			'This is the grammar without left recursive productions'
+
+			print_grammar(new_g)
+
 		if selection == 'LL1':
 			ll = parser.LL_Parser(grammar= new_g)
 			result_parse = ll.buildTable()
@@ -72,13 +80,13 @@ def main():
 				input_chain= st.text_input('Enter a chain for see its derivation tree')
 				if input_chain:
 					t = ll.parse_tree(tokens= [Terminal(name= x) for x in input_chain.split()])
-					G= nx.Graph()
-					#G.add_nodes_from([label for label in t.children + [t.label]] )
-					edges= utils.dfs(t)
-					G.add_edges_from( [(x, i) for (x,y ) in edges.items() for i in y ] )
-					dot = nx.nx_pydot.to_pydot(G)
-					st.graphviz_chart(dot.to_string())
-
+					if isinstance(t, automaton.Tree):
+						draw_graph(t)
+					else:
+						st.write(t) 
+					
+			else:
+				st.write(result_parse)
 		if selection == 'LR(0)/SLR(1)':
 			'Gramática LR(0)/SLR(1)'
 
@@ -101,6 +109,23 @@ def main():
 			num.
 
 	'''
+
+def print_grammar(g):
+	for nt in g.nonTerminals:
+		str_to_print = '%s -> ' %nt
+		for i, prod in enumerate(g.nonTerminals[nt]):
+			str_to_print += ''.join(token.name for token in prod)
+			if i != len(g.nonTerminals[nt]) - 1:
+				str_to_print += ' | '
+		str_to_print
+		'\n'
+
+def draw_graph(t):
+	G= nx.Graph()				
+	edges= utils.dfs(t)
+	G.add_edges_from( [(x, i) for (x,y ) in edges.items() for i in y ] )
+	dot = nx.nx_pydot.to_pydot(G)
+	st.graphviz_chart(dot.to_string())
 
 
 if __name__ == '__main__':
