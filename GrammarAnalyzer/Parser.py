@@ -216,7 +216,8 @@ class LR_Parser(PredictiveParser):
 		return closure
 
 	def buildTable(self, parser_type, automaton):                
-		inputSymbols = self.augmentedGrammar.terminals.union(self.augmentedGrammar.nonTerminals).union({FinalSymbol()})
+		inputSymbols= self.augmentedGrammar.terminals.union(self.augmentedGrammar.nonTerminals).union({FinalSymbol()})
+		self.inputSymbols= inputSymbols
 		table = {(state,symbol):[] for state in automaton.states for symbol in inputSymbols}
 		conflict_info = {state:[] for state in automaton.states}
 		was_conflict = False

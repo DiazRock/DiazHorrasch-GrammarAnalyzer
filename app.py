@@ -66,17 +66,12 @@ def main():
 			ll = parser.LL_Parser(grammar= new_g)
 			result_parse = ll.buildTable()
 			if isinstance(result_parse, dict):
-				'The grammar is LL1'
-				'Here is the table'
-				table_index= list(new_g.nonTerminals)
-				d = {
-						x: [result_parse[nt, x] for nt in table_index ] for x in ll.inputSymbols
-					}
-				df = pd.DataFrame(
-					index= table_index,
-					data = d)
-				# df= pd.DataFrame(result_parse)
-				st.table(df)
+				succes_table(succes_msg= 'The grammar is LL1', 
+				 			result_parse= result_parse,
+							input_symbols= ll.inputSymbols,
+							table_index= list(new_g.nonTerminals),
+							dict_keys= list(new_g.nonTerminals),
+							dict_builder= lambda result_parse, input_symbols, dict_keys : {x: [result_parse[nt, x] for nt in dict_keys ] for x in input_symbols})
 				input_chain= st.text_input('Enter a chain for see its derivation tree')
 				if input_chain:
 					t = ll.parse_tree(tokens= [Terminal(name= x) for x in input_chain.split()])
@@ -88,7 +83,19 @@ def main():
 			else:
 				st.write(result_parse)
 		if selection == 'LR(0)/SLR(1)':
-			'Gramática LR(0)/SLR(1)'
+			lr_canonical = parser.LR_Parser(grammar= new_g)
+			if lr_canonical.was_conflict:
+				[st.write(conflict) for state, list_conflicts in lr_canonical.conflict_info.items() if list_conflicts for conflict in list_conflicts]
+			else:
+				succes_table(succes_msg= 'The grammar is LR(0)/SLR(1)', 
+				 			result_parse= lr_canonical.table,
+							input_symbols= lr_canonical.inputSymbols,
+							table_index= range(len(lr_canonical.LR_Automaton.states)),
+							dict_keys= list(lr_canonical.LR_Automaton.states),
+							dict_builder= lambda result_parse, 
+												input_symbols,
+												dict_keys : {input_symbol: [result_parse[(state, input_symbol)] for state in dict_keys ] for input_symbol in input_symbols})
+
 
 		if selection == 'LALR(1)':
 			'Gramática LALR(1)'
@@ -127,6 +134,19 @@ def draw_graph(t):
 	dot = nx.nx_pydot.to_pydot(G)
 	st.graphviz_chart(dot.to_string())
 
+def succes_table(succes_msg, 
+				 result_parse, 
+				 input_symbols, 
+				 table_index,
+				 dict_keys,
+				 dict_builder):
+	'''%s''' %succes_msg
+	'Here is the table'
+	d = dict_builder(result_parse, input_symbols, dict_keys)
+	df = pd.DataFrame(
+		index= table_index,
+		data = d)
+	st.table(df)
 
 if __name__ == '__main__':
 	main()
