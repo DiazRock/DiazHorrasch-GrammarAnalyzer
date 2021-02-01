@@ -29,7 +29,7 @@ class NoTerminal(GrammarSymbol):
             
 class GrammarClass:
     def __init__(self, initialSymbol, terminals, nonTerminals):
-        self.terminals = {Terminal(x) for x in terminals}
+        self.terminals = [Terminal(x) for x in terminals]
         if isinstance(nonTerminals, list): 
             self.nonTerminals = {NoTerminal(x): [] for x in nonTerminals}
         else:

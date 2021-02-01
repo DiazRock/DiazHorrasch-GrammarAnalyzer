@@ -125,7 +125,7 @@ def commonPreffix(prod1, prod2):
 
 
 def cleanGrammar(grammar:GrammarClass):
-    generable = { x: True for x in grammar.terminals.union({Epsilon()}) }
+    generable = { x: True for x in grammar.terminals + [Epsilon()] }
     generable.update( { x: False for x in grammar.nonTerminals } )
     reachable = { x: False for x in grammar.terminals }
     reachable.update( { x : False if not x == grammar.initialSymbol else True for x in grammar.nonTerminals } )

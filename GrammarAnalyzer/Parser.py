@@ -3,8 +3,7 @@ from GrammarAnalyzer.Automaton import *
 
 class Parser:
 	def __init__(self, grammar):
-		self.inputSymbols = grammar.terminals.union ({FinalSymbol()})
-		
+		self.inputSymbols = grammar.terminals + [FinalSymbol()]
 
 
 class PredictiveParser(Parser):
@@ -169,7 +168,11 @@ class LR_Parser(PredictiveParser):
 				transition_table.update({(currentState, x): new_state})     
 
 		grammar_symbols = {x for x in self.augmentedGrammar.nonTerminals}.union(self.augmentedGrammar.terminals)        
-		return Automaton(states = canonical_states, symbols = grammar_symbols, initialState =canonical_states[0], FinalStates = canonical_states, transitions = transition_table )            
+		return Automaton(states = canonical_states, 
+						symbols = grammar_symbols, 
+						initialState =canonical_states[0], 
+						FinalStates = canonical_states, 
+						transitions = transition_table )
 
 	def goto(self, current_state, grammar_symbol, index):
 		new_state = canonical_State(label = "I{0}".format(index), setOfItems = [], grammar = self.augmentedGrammar)
@@ -216,9 +219,9 @@ class LR_Parser(PredictiveParser):
 		return closure
 
 	def buildTable(self, parser_type, automaton):                
-		inputSymbols= self.augmentedGrammar.terminals.union(self.augmentedGrammar.nonTerminals).union({FinalSymbol()})
+		inputSymbols= self.augmentedGrammar.terminals +  [x for x in self.augmentedGrammar.nonTerminals] + [FinalSymbol()]
 		self.inputSymbols= inputSymbols
-		table = {(state,symbol):[] for state in automaton.states for symbol in inputSymbols}
+		table = {(state, symbol):[] for state in automaton.states for symbol in inputSymbols}
 		conflict_info = {state:[] for state in automaton.states}
 		was_conflict = False
 		for state in automaton.states:

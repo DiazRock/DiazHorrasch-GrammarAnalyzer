@@ -95,6 +95,9 @@ def main():
 							dict_builder= lambda result_parse, 
 												input_symbols,
 												dict_keys : {input_symbol: [result_parse[(state, input_symbol)] for state in dict_keys ] for input_symbol in input_symbols})
+				
+				'## The automaton'
+				draw_automaton(lr_canonical.LR_Automaton)
 
 
 		if selection == 'LALR(1)':
@@ -126,6 +129,13 @@ def print_grammar(g):
 				str_to_print += ' | '
 		str_to_print
 		'\n'
+
+def draw_automaton(t):
+	G= nx.DiGraph()
+	edges= [(x.label + ' ' + x.kernel_items , t.transitions[x, symbol].label + ' ' + t.transitions[x, symbol].kernel_items) for x in t.states for symbol in t.symbols if (x, symbol) in t.transitions]
+	G.add_edges_from([(x,y) for (x,y) in edges])
+	dot = nx.nx_pydot.to_pydot(G)
+	st.graphviz_chart(dot.to_string())
 
 def draw_graph(t):
 	G= nx.Graph()				
