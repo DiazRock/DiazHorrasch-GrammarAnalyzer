@@ -3,7 +3,7 @@ from GrammarAnalyzer.Automaton import *
 
 class Parser:
 	def __init__(self, grammar):
-		self.inputSymbols = grammar.terminals + [FinalSymbol()]
+		self.inputSymbols = [FinalSymbol()] + grammar.terminals
 
 
 class PredictiveParser(Parser):
@@ -115,7 +115,13 @@ class LR_Parser(PredictiveParser):
 		self.table, self.conflict_info, self.was_conflict = LR_Parser.buildTable(self, parser_type = parse_type, automaton = self.LR_Automaton)
 
 	def canonical_LR(self, need_lookahead = False):
-		initialState =canonical_State (label = "I{0}".format(0), setOfItems = [Item(label = {FinalSymbol()} if need_lookahead else None, grammar = self.augmentedGrammar, nonTerminal= self.augmentedGrammar.initialSymbol, point_Position = 0, production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol][0])], grammar = self.augmentedGrammar)          
+		initialState =canonical_State (label = "I{0}".format(0), 
+                                 		setOfItems = [Item(label = {FinalSymbol()} if need_lookahead else None, 
+                                                      grammar = self.augmentedGrammar, 
+                                                      nonTerminal= self.augmentedGrammar.initialSymbol, 
+                                                      point_Position = 0, 
+                                                      production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol][0])],
+                                   		grammar = self.augmentedGrammar)          
 		canonical_states = [initialState]
 		statesQueue = [canonical_states[0]]
 		transition_table = {}
@@ -139,6 +145,7 @@ class LR_Parser(PredictiveParser):
 				state_for_mixed = None
 				for state in canonical_states:
 					if state == new_state:
+						new_state= state
 						if need_lookahead :
 							if state.equal_looksahead(new_state):
 								founded = True
@@ -219,7 +226,7 @@ class LR_Parser(PredictiveParser):
 		return closure
 
 	def buildTable(self, parser_type, automaton):                
-		inputSymbols= self.augmentedGrammar.terminals +  [x for x in self.augmentedGrammar.nonTerminals] + [FinalSymbol()]
+		inputSymbols= [FinalSymbol()] + self.augmentedGrammar.terminals +  [x for x in self.augmentedGrammar.nonTerminals if x != self.augmentedGrammar.initialSymbol]
 		self.inputSymbols= inputSymbols
 		table = {(state, symbol):[] for state in automaton.states for symbol in inputSymbols}
 		conflict_info = {state:[] for state in automaton.states}

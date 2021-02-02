@@ -132,7 +132,7 @@ def print_grammar(g):
 
 def draw_automaton(t):
 	G= nx.DiGraph()
-	edges= [(x.label + ' ' + x.kernel_items , t.transitions[x, symbol].label + ' ' + t.transitions[x, symbol].kernel_items) for x in t.states for symbol in t.symbols if (x, symbol) in t.transitions]
+	edges= [(x, t.transitions[x, symbol]) for x in t.states for symbol in t.symbols if (x, symbol) in t.transitions]
 	G.add_edges_from([(x,y) for (x,y) in edges])
 	dot = nx.nx_pydot.to_pydot(G)
 	st.graphviz_chart(dot.to_string())

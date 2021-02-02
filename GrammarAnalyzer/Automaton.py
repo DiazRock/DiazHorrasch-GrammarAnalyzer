@@ -62,10 +62,10 @@ class canonical_State(state):
 		return True
 
 	def __repr__(self):
-		l = []
-		for x in self.setOfItems:
-			l.append (repr(x))
-		return repr(self.label) + ": " + repr(l) 
+		l = "".join( repr(x) + '\n' for x in self.kernel_items )
+		l += '--------------\n'
+		l += "".join(repr(x) + '\n' for x in self.setOfItems if not x in self.kernel_items)
+		return repr(self.label) + "\n " + repr(l) 
 
 
 	def __hash__(self):
