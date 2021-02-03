@@ -9,6 +9,7 @@ import GrammarAnalyzer.Parser as parser
 import GrammarAnalyzer.Automaton as automaton
 import utils
 
+
 def main():
 	st.sidebar.markdown (
 		'''
@@ -96,7 +97,7 @@ def main():
 												input_symbols,
 												dict_keys : {input_symbol: [result_parse[(state, input_symbol)] for state in dict_keys ] for input_symbol in input_symbols})
 				
-				'## The automaton'
+				st.markdown('## The automaton')
 				draw_automaton(lr_canonical.LR_Automaton)
 
 
@@ -132,8 +133,9 @@ def print_grammar(g):
 
 def draw_automaton(t):
 	G= nx.DiGraph()
-	edges= [(x, t.transitions[x, symbol]) for x in t.states for symbol in t.symbols if (x, symbol) in t.transitions]
-	G.add_edges_from([(x,y) for (x,y) in edges])
+	edges= [(x, t.transitions[x, symbol], symbol) for x in t.states for symbol in t.symbols if (x, symbol) in t.transitions]
+	for (x, y, label) in edges:
+		G.add_edge(x, y, label= label)
 	dot = nx.nx_pydot.to_pydot(G)
 	st.graphviz_chart(dot.to_string())
 
@@ -150,8 +152,8 @@ def succes_table(succes_msg,
 				 table_index,
 				 dict_keys,
 				 dict_builder):
-	'''%s''' %succes_msg
-	'Here is the table'
+	st.markdown('''%s''' %succes_msg) 
+	st.markdown ('Here is the table')
 	d = dict_builder(result_parse, input_symbols, dict_keys)
 	df = pd.DataFrame(
 		index= table_index,
