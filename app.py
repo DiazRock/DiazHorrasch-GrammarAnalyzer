@@ -99,7 +99,13 @@ def main():
 				
 				st.markdown('## The automaton')
 				draw_automaton(lr_canonical.LR_Automaton)
-
+				input_chain= st.text_input('Enter a chain for see its derivation tree')
+				if input_chain:
+					t = lr_canonical.parse_tree(input_tokens= [Terminal(name= x) for x in input_chain.split()])
+					if isinstance(t, automaton.Tree):
+						draw_graph(t)
+					else:
+						st.write(t)
 
 		if selection == 'LALR(1)':
 			'Gramática LALR(1)'

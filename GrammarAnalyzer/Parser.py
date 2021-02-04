@@ -44,10 +44,12 @@ class LL_Parser(PredictiveParser):
 
 	def parse_tree(self, tokens):
 		index_tokens= 0
-		derivation_tree = Tree(label = self.initialSymbol, children = [], parent = None)
+		index_node_tree= 0
+		derivation_tree = Tree(label = str (self.initialSymbol) + "_" + str(index_node_tree), children = [], parent = None)
 		stack_symbols = [(self.initialSymbol, derivation_tree)]        
 		column_tracking= 1
 		row_tracking= 1
+		
 		while(stack_symbols and index_tokens < len(tokens)):
 			symbol, current_tree = stack_symbols.pop()
 
@@ -62,7 +64,9 @@ class LL_Parser(PredictiveParser):
 				if not prod:
 					return Fail("({0}, {1}): Syntax error at or near {2}".format(row_tracking, column_tracking, tokens[index_tokens]))
 
-				node_to_push = Tree(label = prod, children = [], parent = current_tree)
+				index_node_tree += 1
+				node_to_push = Tree(label = str (prod) + '_' + str(index_node_tree), 
+                        children = [], parent = current_tree)
 				current_tree.children.append(node_to_push)
 				for i in range(len(prod) - 1, -1, -1):
 					if prod[i] != Epsilon():
@@ -258,7 +262,9 @@ class LR_Parser(PredictiveParser):
 						if symbol == FinalSymbol() and item.nonTerminal == self.augmentedGrammar.initialSymbol and item.production == tuple([NoTerminal(item.nonTerminal.name[:len(item.nonTerminal.name) - 1])]):
 							table[state, symbol] = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
 						else:
-							table[state,symbol] = reduce(table_tuple = (state, symbol), response = len(item.production), label = item) 
+							table[state,symbol] = reduce(table_tuple = (state, symbol),
+                                    					 response = len(item.production),
+                                          				 label = item)
 						
 				if shift_reduce_conflict:
 					was_conflict = True
@@ -269,25 +275,34 @@ class LR_Parser(PredictiveParser):
 
 		return table, conflict_info, was_conflict
 
-	def parser_tree(self, tokens):
+	def parse_tree(self, input_tokens):
 		stack_states = [self.LR_Automaton.initialState]
 		stack_trees = []
-		for i in tokens:
-			action = self.table([stack_states[-1], i])
+		i = 0
+		tokens= input_tokens + [FinalSymbol()]
+		index_node_tree= 0
+		while i < len (tokens):
+			action = self.table[(stack_states[-1], tokens[i])]
 			if not action:
-				return Fail("La cadena {0} no pertenece al lenguaje".format(tokens))
+				return Fail("Syntax error")
+			elif isinstance (action, accept):
+				break
 			elif isinstance(action, shift):
 				stack_states.append(action.response)
-				stack_trees.append(Tree(label = i))
+				index_node_tree += 1
+				stack_trees.append(Tree(label = str (tokens[i]) + "_" + str(index_node_tree)))
+				i += 1
 			elif isinstance(action, reduce):
 				children = []
-				for i in range(action.response + 1):
+				for _ in range(action.response):
 					stack_states.pop()
 					children.append(stack_trees.pop())
-				stack_trees.append(Tree(label = action.response.nonTerminal, children=children))
+				stack_states.append(self.LR_Automaton.transitions[(stack_states[-1], action.label.nonTerminal)])
+				index_node_tree += 1
+				stack_trees.append(Tree(label = str (action.label.nonTerminal) + "_" + str(index_node_tree), 
+                            children=children))
+
 		return stack_trees.pop()
-
-
 
 class Fail:
 	def __init__(self, error_message):
