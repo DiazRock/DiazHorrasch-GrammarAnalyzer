@@ -115,7 +115,7 @@ class LR_Parser(PredictiveParser):
 		self.augmentedGrammar.nonTerminals = d
 		self.Firsts = CalculateFirst(self.augmentedGrammar)
 		self.Follows = CalculateFollow(self.augmentedGrammar, self.Firsts)
-		self.LR_Automaton = LR_Parser.canonical_LR(self, need_lookahead=parse_type)
+		self.LR_Automaton = LR_Parser.canonical_LR(self, need_lookahead=parse_type == 'LR(1)')
 		self.table, self.conflict_info, self.was_conflict = LR_Parser.buildTable(self, parser_type = parse_type, automaton = self.LR_Automaton)
 
 	def canonical_LR(self, need_lookahead = False):
@@ -250,9 +250,12 @@ class LR_Parser(PredictiveParser):
 					table[(state,symbol)] = shift(table_tuple = tuple([state,symbol]), response = response_state, label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )
 
 				else:
-					looks_ahead = self.Follows[item.nonTerminal] if not parser_type else item.label
+					looks_ahead = self.Follows[item.nonTerminal] if parser_type == 'SLR'\
+     					else item.label if parser_type == 'LR(1)' \
+          				else [item[item.point_Position]] if parser_type == 'LR(0)' \
+						else []
 						
-					for symbol in looks_ahead:                        
+					for symbol in looks_ahead:
 						if table[state,symbol]:
 							conflict_symbol = symbol
 							if isinstance(table[state,symbol], shift):
