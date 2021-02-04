@@ -281,10 +281,17 @@ class LR_Parser(PredictiveParser):
 		i = 0
 		tokens= input_tokens + [FinalSymbol()]
 		index_node_tree= 0
+		row_tracker = 1
+		column_tracker= 1
 		while i < len (tokens):
+			if tokens[i].label == '\n':
+				row_tracker += 1
+				column_tracker = 1
+			else:
+				column_tracker += 1
 			action = self.table[(stack_states[-1], tokens[i])]
 			if not action:
-				return Fail("Syntax error")
+				return Fail("({0}, {1}): Syntax error at or near {2}".format(row_tracker, column_tracker, tokens[i]))
 			elif isinstance (action, accept):
 				break
 			elif isinstance(action, shift):

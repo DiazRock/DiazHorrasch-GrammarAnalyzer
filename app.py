@@ -84,34 +84,14 @@ def main():
 			else:
 				st.write(result_parse)
 		if selection == 'LR(0)/SLR(1)':
-			lr_canonical = parser.LR_Parser(grammar= new_g)
-			if lr_canonical.was_conflict:
-				[st.write(conflict) for state, list_conflicts in lr_canonical.conflict_info.items() if list_conflicts for conflict in list_conflicts]
-			else:
-				succes_table(succes_msg= 'The grammar is LR(0)/SLR(1)', 
-				 			result_parse= lr_canonical.table,
-							input_symbols= lr_canonical.inputSymbols,
-							table_index= range(len(lr_canonical.LR_Automaton.states)),
-							dict_keys= list(lr_canonical.LR_Automaton.states),
-							dict_builder= lambda result_parse, 
-												input_symbols,
-												dict_keys : {input_symbol: [result_parse[(state, input_symbol)] for state in dict_keys ] for input_symbol in input_symbols})
-				
-				st.markdown('## The automaton')
-				draw_automaton(lr_canonical.LR_Automaton)
-				input_chain= st.text_input('Enter a chain for see its derivation tree')
-				if input_chain:
-					t = lr_canonical.parse_tree(input_tokens= [Terminal(name= x) for x in input_chain.split()])
-					if isinstance(t, automaton.Tree):
-						draw_graph(t)
-					else:
-						st.write(t)
-
+			build_bottom_up(grammar= g, succes_msg= 'The grammar is LR(0)/SLR(1)')
+			
 		if selection == 'LALR(1)':
-			'Gramática LALR(1)'
+			build_bottom_up(grammar= new_g, succes_msg= 'The grammar is LALR(1)', parse_type= 1)
 
 		if selection == 'LR(1)':
-			'Gramática LR(1)'
+			pass
+
 
 
 	'''
@@ -126,6 +106,35 @@ def main():
 			num.
 
 	'''
+
+def build_bottom_up(grammar, succes_msg, parse_type = 0):
+	lr = parser.LR_Parser(grammar, parse_type= parse_type)
+	if lr.was_conflict:
+		[st.write(conflict) for state, list_conflicts in lr.conflict_info.items() if list_conflicts for conflict in list_conflicts]
+	else:
+		succes_table(succes_msg= 'The grammar is LR(0)/SLR(1)', 
+					result_parse= lr.table,
+					input_symbols= lr.inputSymbols,
+					table_index= range(len(lr.LR_Automaton.states)),
+					dict_keys= list(lr.LR_Automaton.states),
+					dict_builder= lambda result_parse, 
+										input_symbols,
+										dict_keys : {input_symbol: [result_parse[(state, input_symbol)] for state in dict_keys ] for input_symbol in input_symbols})
+		
+		input_chains(lr)
+
+
+def input_chains(lr):
+	st.markdown('## The automaton')
+	draw_automaton(lr.LR_Automaton)
+	input_chain= st.text_input('Enter a chain for see its derivation tree')
+	if input_chain:
+		t = lr.parse_tree(input_tokens= [Terminal(name= x) for x in input_chain.split()])
+		if isinstance(t, automaton.Tree):
+			draw_graph(t)
+		else:
+			st.write(t)
+
 
 def print_grammar(g):
 	for nt in g.nonTerminals:
