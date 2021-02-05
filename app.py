@@ -25,7 +25,7 @@ def main():
 	)
 
 	
-	selection = st.sidebar.radio("Select the parser option", ['LL1', 'LR(0)/SLR(1)', 'LALR(1)', 'LR(1)'])
+	selection = st.sidebar.radio("Select the parser option", ['LL1', 'LR(0)', 'SLR(1)', 'LALR(1)', 'LR(1)'])
 
 	st.sidebar.markdown(
 		'''
@@ -83,14 +83,27 @@ def main():
 					
 			else:
 				st.write(result_parse)
-		if selection == 'LR(0)/SLR(1)':
-			build_bottom_up(grammar= g, succes_msg= 'The grammar is LR(0)/SLR(1)')
+
+		if selection == 'LR(0)':
+			build_bottom_up(grammar= g, 
+							succes_msg= 'The grammar is LR(0)', 
+							parse_type= 'LR(0)')
+
+		if selection == 'SLR(1)':
+			build_bottom_up(grammar= g, 
+							succes_msg= 'The grammar is SLR(1)', 
+							parse_type= 'SLR(1)')
 			
 		if selection == 'LALR(1)':
-			build_bottom_up(grammar= new_g, succes_msg= 'The grammar is LALR(1)', parse_type= 1)
+			build_bottom_up(grammar= new_g, 
+							succes_msg= 'The grammar is LALR(1)', 
+							parse_type= 'LALR(1)')
 
 		if selection == 'LR(1)':
-			pass
+			build_bottom_up(grammar= new_g, 
+							succes_msg= 'The grammar is LR(1)', 
+							parse_type= 'LR(1)')
+			
 
 
 
@@ -111,22 +124,21 @@ def build_bottom_up(grammar, succes_msg, parse_type = 0):
 	lr = parser.LR_Parser(grammar, parse_type= parse_type)
 	if lr.was_conflict:
 		[st.write(conflict) for state, list_conflicts in lr.conflict_info.items() if list_conflicts for conflict in list_conflicts]
-	else:
-		succes_table(succes_msg= 'The grammar is LR(0)/SLR(1)', 
-					result_parse= lr.table,
-					input_symbols= lr.inputSymbols,
-					table_index= range(len(lr.LR_Automaton.states)),
-					dict_keys= list(lr.LR_Automaton.states),
-					dict_builder= lambda result_parse, 
-										input_symbols,
-										dict_keys : {input_symbol: [result_parse[(state, input_symbol)] for state in dict_keys ] for input_symbol in input_symbols})
-		
+	succes_table(succes_msg= succes_msg if not lr.was_conflict else 'The table is not efective because of conflicts', 
+				result_parse= lr.table,
+				input_symbols= lr.inputSymbols,
+				table_index= range(len(lr.LR_Automaton.states)),
+				dict_keys= list(lr.LR_Automaton.states),
+				dict_builder= lambda result_parse, 
+									input_symbols,
+									dict_keys : {input_symbol: [result_parse[(state, input_symbol)] for state in dict_keys ] for input_symbol in input_symbols})
+	st.markdown('## The automaton')
+	draw_automaton(lr.LR_Automaton)
+	if not lr.was_conflict:
 		input_chains(lr)
 
 
 def input_chains(lr):
-	st.markdown('## The automaton')
-	draw_automaton(lr.LR_Automaton)
 	input_chain= st.text_input('Enter a chain for see its derivation tree')
 	if input_chain:
 		t = lr.parse_tree(input_tokens= [Terminal(name= x) for x in input_chain.split()])

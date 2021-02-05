@@ -115,7 +115,7 @@ class LR_Parser(PredictiveParser):
 		self.augmentedGrammar.nonTerminals = d
 		self.Firsts = CalculateFirst(self.augmentedGrammar)
 		self.Follows = CalculateFollow(self.augmentedGrammar, self.Firsts)
-		self.LR_Automaton = LR_Parser.canonical_LR(self, need_lookahead=parse_type == 'LR(1)')
+		self.LR_Automaton = LR_Parser.canonical_LR(self, need_lookahead= 1 if parse_type == 'LALR(1)' else 2 if parse_type == 'LR(1)' else  0)
 		self.table, self.conflict_info, self.was_conflict = LR_Parser.buildTable(self, parser_type = parse_type, automaton = self.LR_Automaton)
 
 	def canonical_LR(self, need_lookahead = False):
@@ -230,14 +230,13 @@ class LR_Parser(PredictiveParser):
 		return closure
 
 	def buildTable(self, parser_type, automaton):                
-		inputSymbols= [FinalSymbol()] + self.augmentedGrammar.terminals +  [x for x in self.augmentedGrammar.nonTerminals if x != self.augmentedGrammar.initialSymbol]
+		inputSymbols= self.augmentedGrammar.terminals + [FinalSymbol()] + [x for x in self.augmentedGrammar.nonTerminals if x != self.augmentedGrammar.initialSymbol]
 		self.inputSymbols= inputSymbols
 		table = {(state, symbol):[] for state in automaton.states for symbol in inputSymbols}
 		conflict_info = {state:[] for state in automaton.states}
 		was_conflict = False
 		for state in automaton.states:
 			for item in state.setOfItems:
-				
 				shift_reduce_conflict = reduce_reduce_conflict = False
 				conflict_symbol = None
 				if item.point_Position < len(item.production):
@@ -250,9 +249,9 @@ class LR_Parser(PredictiveParser):
 					table[(state,symbol)] = shift(table_tuple = tuple([state,symbol]), response = response_state, label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )
 
 				else:
-					looks_ahead = self.Follows[item.nonTerminal] if parser_type == 'SLR'\
-     					else item.label if parser_type == 'LR(1)' \
-          				else [item[item.point_Position]] if parser_type == 'LR(0)' \
+					looks_ahead = self.Follows[item.nonTerminal] if parser_type == 'SLR(1)'\
+						else item.label if parser_type == 'LR(1)' \
+						else [ t for it in state.setOfItems if item.production and item.production[item.point_Position - 1] == it.production[item.point_Position - 1 : item.point_Position][0] for t in it.production[item.point_Position :  item.point_Position + 1] ] if parser_type == 'LR(0)' \
 						else []
 						
 					for symbol in looks_ahead:
@@ -262,13 +261,14 @@ class LR_Parser(PredictiveParser):
 								shift_reduce_conflict = table[state,symbol]
 							else:
 								reduce_reduce_conflict = table[state, symbol]
-						if symbol == FinalSymbol() and item.nonTerminal == self.augmentedGrammar.initialSymbol and item.production == tuple([NoTerminal(item.nonTerminal.name[:len(item.nonTerminal.name) - 1])]):
-							table[state, symbol] = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
+						if (symbol == FinalSymbol() or parser_type == 'LR(0)') \
+							and (NoTerminal (self.augmentedGrammar.initialSymbol.name.rstrip("'")),) == item.production:
+							table[state, FinalSymbol()] = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
 						else:
 							table[state,symbol] = reduce(table_tuple = (state, symbol),
                                     					 response = len(item.production),
                                           				 label = item)
-						
+					
 				if shift_reduce_conflict:
 					was_conflict = True
 					conflict_info[state].append(shift_reduce_fail(shift_decision = shift_reduce_conflict, reduce_decision = table[state,symbol], conflict_symbol = conflict_symbol))
