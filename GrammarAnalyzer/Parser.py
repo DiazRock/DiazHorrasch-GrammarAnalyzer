@@ -249,7 +249,7 @@ class LR_Parser(PredictiveParser):
 
 				else:
 					looks_ahead = self.Follows[item.nonTerminal] if parser_type == 'SLR(1)'\
-						else item.label if parser_type == 'LR(1)' \
+						else item.label if parser_type == 'LR(1)' or parser_type == 'LALR(1)'\
 						else self.augmentedGrammar.terminals + [FinalSymbol()] if parser_type == 'LR(0)' \
 						else []
 						
