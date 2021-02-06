@@ -237,14 +237,13 @@ class LR_Parser(PredictiveParser):
 		was_conflict = False
 		for state in automaton.states:
 			for item in state.setOfItems:
-				shift_reduce_conflict = reduce_reduce_conflict = False
-				conflict_symbol = None
+				shift_reduce_conflict = []
+				reduce_reduce_conflict = []
 				if item.point_Position < len(item.production):
 					symbol = item.production[item.point_Position]
 					if table[(state, symbol)] and isinstance(table[(state, symbol)][-1], reduce):
-						shift_reduce_conflict = table[(state, symbol)]
+						shift_reduce_conflict.append (table[(state, symbol)])
 
-					conflict_symbol = symbol
 					response_state = automaton.transitions[(state, symbol)]
 					table[(state,symbol)].append(shift(table_tuple = tuple([state,symbol]), response = response_state, label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )) 
 
@@ -256,11 +255,10 @@ class LR_Parser(PredictiveParser):
 						
 					for symbol in looks_ahead:
 						if table[state,symbol]:
-							conflict_symbol = symbol
-							if table[(state, symbol)] and isinstance(table[state,symbol][-1], shift):
-								shift_reduce_conflict = table[state,symbol][-1]
+							if isinstance(table[state,symbol][-1], shift):
+								shift_reduce_conflict.append((table[state,symbol][-1], symbol))
 							else:
-								reduce_reduce_conflict = table[state,symbol][-1]
+								reduce_reduce_conflict.append((table[state,symbol][-1], symbol))
 						if (parser_type == 'LR(0)' or symbol == FinalSymbol())  \
 							and (NoTerminal (self.augmentedGrammar.initialSymbol.name.rstrip("'")),) == item.production:
 							table[state, symbol].append (accept(table_tuple = (state, symbol), response = 'accept', label='ok'))
@@ -271,10 +269,16 @@ class LR_Parser(PredictiveParser):
 				
 				if shift_reduce_conflict:
 					was_conflict = True
-					conflict_info[state].append(shift_reduce_fail(shift_decision = shift_reduce_conflict, reduce_decision = table[state,symbol], conflict_symbol = conflict_symbol))
+					conflict_info[state] += [shift_reduce_fail(shift_decision = shc,
+                                                reduce_decision = table[state,symbol], 
+                                                conflict_symbol = conflict_symbol,
+                                                state= state.label) for shc, conflict_symbol in shift_reduce_conflict ]
 				if reduce_reduce_conflict:
 					was_conflict = True
-					conflict_info[state].append(reduce_reduce_fail(reduce_decision1 = reduce_reduce_conflict, reduce_decision2 = table[state,symbol], conflict_symbol = conflict_symbol))
+					conflict_info[state] += [reduce_reduce_fail(reduce_decision1 = rdc,
+																reduce_decision2 = table[state,symbol],
+																conflict_symbol = conflict_symbol,
+																state= state.label) for rdc, conflict_symbol in reduce_reduce_conflict ]
 
 		return table, conflict_info, was_conflict
 
@@ -287,16 +291,16 @@ class LR_Parser(PredictiveParser):
 		row_tracker = 1
 		column_tracker= 1
 		while i < len (tokens):
-			if tokens[i].label == '\n':
+			if tokens[i].name == '\n':
 				row_tracker += 1
 				column_tracker = 1
 			else:
 				column_tracker += 1
-			action = self.table[(stack_states[-1], tokens[i])]
+			action = next( (act for act in self.table[(stack_states[-1], tokens[i])]), None) 
 			if not action:
 				return Fail("({0}, {1}): Syntax error at or near {2}".format(row_tracker, column_tracker, tokens[i]))
-			elif isinstance (action, accept):
-				break
+			if isinstance (action, accept):
+    				break
 			elif isinstance(action, shift):
 				stack_states.append(action.response)
 				index_node_tree += 1
@@ -324,19 +328,31 @@ class Fail:
 	__str__ = __repr__	
 		
 class automaton_fail(Fail):
-	def __init__(self, fail_type, decision1, decision2, conflict_symbol):
+	def __init__(self, fail_type, decision1, decision2, conflict_symbol, state):
 		self.decision1 = decision1
 		self.decision2 = decision2
 		self.conflict_symbol = conflict_symbol
-		self.error_message = "Conflicto {3} entre las decisiones {0} y {1} para el símbolo {2}".format(decision1, decision2 , conflict_symbol, fail_type)
+		self.error_message = "State {4} symbol {2} : {3} between {0} and {1} ".format(decision1, decision2 , conflict_symbol, fail_type, state)
 
 class shift_reduce_fail(automaton_fail):
-	def __init__(self, shift_decision, reduce_decision, conflict_symbol):
-		super().__init__(fail_type = "shift-reduce", decision1= shift_decision, decision2 = reduce_decision, conflict_symbol = conflict_symbol)
+	def __init__(self, shift_decision, reduce_decision, conflict_symbol, state):
+		super().__init__(fail_type = "shift-reduce", 
+						decision1= shift_decision, 
+						decision2 = reduce_decision, 
+						conflict_symbol = conflict_symbol,
+						state= state)
 
 class reduce_reduce_fail(automaton_fail):
-	def __init__(self, reduce_decision1, reduce_decision2, conflict_symbol):
-		super().__init__(fail_type = "reduce-reduce", decision1= reduce_decision1, decision2 = reduce_decision2, conflict_symbol = conflict_symbol)
+	def __init__(self, 
+				reduce_decision1, 
+				reduce_decision2, 
+				conflict_symbol,
+				state):
+		super().__init__(fail_type = "reduce-reduce", 
+						 decision1= reduce_decision1, 
+						 decision2 = reduce_decision2,
+						 conflict_symbol = conflict_symbol,
+						 state= state)
 
 class Action:
 	def __init__(self, table_tuple, response, label):
