@@ -241,34 +241,34 @@ class LR_Parser(PredictiveParser):
 				conflict_symbol = None
 				if item.point_Position < len(item.production):
 					symbol = item.production[item.point_Position]
-					if isinstance(table[(state, symbol)], reduce):
+					if table[(state, symbol)] and isinstance(table[(state, symbol)][-1], reduce):
 						shift_reduce_conflict = table[(state, symbol)]
 
 					conflict_symbol = symbol
-					response_state = automaton.transitions[(state, symbol)]                                        
-					table[(state,symbol)] = shift(table_tuple = tuple([state,symbol]), response = response_state, label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )
+					response_state = automaton.transitions[(state, symbol)]
+					table[(state,symbol)].append(shift(table_tuple = tuple([state,symbol]), response = response_state, label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )) 
 
 				else:
 					looks_ahead = self.Follows[item.nonTerminal] if parser_type == 'SLR(1)'\
 						else item.label if parser_type == 'LR(1)' \
-						else [ t for it in state.setOfItems if item.production and item.production[item.point_Position - 1] == it.production[item.point_Position - 1 : item.point_Position][0] for t in it.production[item.point_Position :  item.point_Position + 1] ] if parser_type == 'LR(0)' \
+						else self.augmentedGrammar.terminals + [FinalSymbol()] if parser_type == 'LR(0)' \
 						else []
 						
 					for symbol in looks_ahead:
 						if table[state,symbol]:
 							conflict_symbol = symbol
-							if isinstance(table[state,symbol], shift):
-								shift_reduce_conflict = table[state,symbol]
+							if table[(state, symbol)] and isinstance(table[state,symbol][-1], shift):
+								shift_reduce_conflict = table[state,symbol][-1]
 							else:
-								reduce_reduce_conflict = table[state, symbol]
-						if (symbol == FinalSymbol() or parser_type == 'LR(0)') \
+								reduce_reduce_conflict = table[state,symbol][-1]
+						if (parser_type == 'LR(0)' or symbol == FinalSymbol())  \
 							and (NoTerminal (self.augmentedGrammar.initialSymbol.name.rstrip("'")),) == item.production:
-							table[state, FinalSymbol()] = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
+							table[state, symbol].append (accept(table_tuple = (state, symbol), response = 'accept', label='ok'))
 						else:
-							table[state,symbol] = reduce(table_tuple = (state, symbol),
-                                    					 response = len(item.production),
-                                          				 label = item)
-					
+							table[state,symbol].append (reduce(table_tuple = (state, symbol),
+														 response = len(item.production),
+														 label = item))
+				
 				if shift_reduce_conflict:
 					was_conflict = True
 					conflict_info[state].append(shift_reduce_fail(shift_decision = shift_reduce_conflict, reduce_decision = table[state,symbol], conflict_symbol = conflict_symbol))

@@ -64,14 +64,14 @@ def main():
 			print_grammar(new_g)
 
 		if selection == 'LL1':
-			ll = parser.LL_Parser(grammar= new_g)
+			ll = parser.LL_Parser(grammar= g)
 			result_parse = ll.buildTable()
 			if isinstance(result_parse, dict):
 				succes_table(succes_msg= 'The grammar is LL1', 
 				 			result_parse= result_parse,
 							input_symbols= ll.inputSymbols,
-							table_index= list(new_g.nonTerminals),
-							dict_keys= list(new_g.nonTerminals),
+							table_index= list(g.nonTerminals),
+							dict_keys= list(g.nonTerminals),
 							dict_builder= lambda result_parse, input_symbols, dict_keys : {x: [result_parse[nt, x] for nt in dict_keys ] for x in input_symbols})
 				input_chain= st.text_input('Enter a chain for see its derivation tree')
 				if input_chain:
@@ -95,12 +95,12 @@ def main():
 							parse_type= 'SLR(1)')
 			
 		if selection == 'LALR(1)':
-			build_bottom_up(grammar= new_g, 
+			build_bottom_up(grammar= g, 
 							succes_msg= 'The grammar is LALR(1)', 
 							parse_type= 'LALR(1)')
 
 		if selection == 'LR(1)':
-			build_bottom_up(grammar= new_g, 
+			build_bottom_up(grammar= g, 
 							succes_msg= 'The grammar is LR(1)', 
 							parse_type= 'LR(1)')
 			
