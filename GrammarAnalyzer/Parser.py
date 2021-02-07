@@ -361,7 +361,7 @@ class Action:
 		return repr(self.label)
 
 	def __eq__(self, other):
-		return self.table_tuple == other.table_tuple and self.response == other.response and self.label == other.label
+		return self.table_tuple == other.table_tuple and type(self.response) == type(other.response) and self.response == other.response and self.label == other.label
 
 	def __hash__(self):
 		return hash(self.response) + hash(self.label) + hash(self.table_tuple)
