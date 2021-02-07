@@ -61,6 +61,10 @@ class canonical_State(state):
 				if x==y and x.label!=y.label: return False
 		return True
 
+	def equal_kernel_items_center(self, other):
+		return self.kernel_items == other.kernel_items
+
+
 	def __repr__(self):
 		l = "".join( repr(x) + '\n' for x in self.kernel_items )
 		l += '--------------\n'

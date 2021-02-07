@@ -115,12 +115,12 @@ class LR_Parser(PredictiveParser):
 		self.augmentedGrammar.nonTerminals = d
 		self.Firsts = CalculateFirst(self.augmentedGrammar)
 		self.Follows = CalculateFollow(self.augmentedGrammar, self.Firsts)
-		self.LR_Automaton = LR_Parser.canonical_LR(self, need_lookahead= 1 if parse_type == 'LALR(1)' else 2 if parse_type == 'LR(1)' else  0)
+		self.LR_Automaton = LR_Parser.canonical_LR(self, parse_type= parse_type )
 		self.table, self.conflict_info, self.was_conflict = LR_Parser.buildTable(self, parser_type = parse_type, automaton = self.LR_Automaton)
 
-	def canonical_LR(self, need_lookahead = False):
+	def canonical_LR(self, parse_type = 'LR(0)'):
 		initialState =canonical_State (label = "I{0}".format(0), 
-                                 		setOfItems = [Item(label = {FinalSymbol()} if need_lookahead else None, 
+                                 		setOfItems = [Item(label = {FinalSymbol()} if parse_type != 'SLR(1)' and parse_type != 'LR(0)' else None,
                                                       grammar = self.augmentedGrammar, 
                                                       nonTerminal= self.augmentedGrammar.initialSymbol, 
                                                       point_Position = 0, 
@@ -137,45 +137,31 @@ class LR_Parser(PredictiveParser):
 			else:
 				currentState, otherCurrent = statesQueue.pop(0)
 			currentState.setOfItems = (LR_Parser.closure(self, currentState.kernel_items))
-			symbols = []            
-			{symbols.append (item.production[item.point_Position]) for item in currentState.setOfItems if item.point_Position < len(item.production) and not item.production[item.point_Position] in symbols}
-			for x in symbols:                
+			symbols = []
+			[symbols.append (item.production[item.point_Position]) for item in \
+       				  currentState.setOfItems if item.point_Position < len(item.production)\
+                 	  and not item.production[item.point_Position] in symbols ]
+			for x in symbols:
 				new_state = LR_Parser.goto(self, currentState, x, len(canonical_states))
 				if otherCurrent:
 					if transition_table[(otherCurrent,x)] != new_state:
 						return Fail("No se puede hacer la mezcla LALR, ya que hay indeterminismo para los estados {0}:{3} y {1}:{4} con el símbolo {2}".format(currentState, otherCurrent, x, new_state, transition_table[(otherCurrent, x)]))
-					
-				founded = False
-				state_for_mixed = None
-				for state in canonical_states:
-					if state == new_state:
-						new_state= state
-						if need_lookahead :
-							if state.equal_looksahead(new_state):
-								founded = True
-							if founded:
-								break
-							state_for_mixed = state if need_lookahead == 2 else None
-							if state_for_mixed: 
-								break
-						else:
-							founded = True
-							break                           
 
-				if not founded:
-					if not state_for_mixed:
-						canonical_states.append(new_state)
-						statesQueue.append(new_state)
-					else:
-						changed = False
-						for i in range(len(state_for_mixed.kernel_items)):
-							before = len(state_for_mixed.kernel_items[i].label)
-							state_for_mixed.kernel_items[i].label.update(new_state.kernel_items[i].label)
-							changed = not before == len(state_for_mixed.kernel_items[i].label)
-						if changed:    
-							state_for_mixed.label += "-" + new_state.label
-							statesQueue.append((new_state,state_for_mixed))
-				
+				if parse_type == 'LR(1)':
+					repeated_state = next (( i for i in canonical_states\
+											if new_state.equal_kernel_items_center(i) \
+											and new_state.equal_looksahead(i)), False)
+				else:
+					repeated_state = next ( (i for i in canonical_states if\
+											new_state.equal_kernel_items_center(i)), False)
+				if repeated_state:
+					if parse_type == 'LALR(1)':
+						for i, item in enumerate(new_state.kernel_items):
+							repeated_state.kernel_items[i].label.update(item.label)
+					new_state= repeated_state
+				else:
+					canonical_states.append(new_state)
+					statesQueue.append(new_state)
 				transition_table.update({(currentState, x): new_state})     
 
 		grammar_symbols = {x for x in self.augmentedGrammar.nonTerminals}.union(self.augmentedGrammar.terminals)        
@@ -241,11 +227,15 @@ class LR_Parser(PredictiveParser):
 				reduce_reduce_conflict = []
 				if item.point_Position < len(item.production):
 					symbol = item.production[item.point_Position]
-					if table[(state, symbol)] and isinstance(table[(state, symbol)][-1], reduce):
-						shift_reduce_conflict.append (table[(state, symbol)])
+					if table[(state, symbol)] and isinstance(table[state,symbol][-1], reduce):
+						shift_reduce_conflict.append ((table[state,symbol][-1], symbol))
 
 					response_state = automaton.transitions[(state, symbol)]
-					table[(state,symbol)].append(shift(table_tuple = tuple([state,symbol]), response = response_state, label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )) 
+					to_insert = shift(table_tuple = tuple([state,symbol]), 
+														response = response_state, 
+														label = "S" + response_state.label.partition('-')[0][1:] if isinstance(symbol, Terminal) else response_state.label.partition('-')[0][1:] )
+					if not to_insert in table[(state,symbol)]:
+						table[(state,symbol)].append(to_insert)
 
 				else:
 					looks_ahead = self.Follows[item.nonTerminal] if parser_type == 'SLR(1)'\
@@ -261,11 +251,15 @@ class LR_Parser(PredictiveParser):
 								reduce_reduce_conflict.append((table[state,symbol][-1], symbol))
 						if (parser_type == 'LR(0)' or symbol == FinalSymbol())  \
 							and (NoTerminal (self.augmentedGrammar.initialSymbol.name.rstrip("'")),) == item.production:
-							table[state, symbol].append (accept(table_tuple = (state, symbol), response = 'accept', label='ok'))
+							to_insert = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
+							if not to_insert in table[state, symbol]:
+								table[state, symbol].append (to_insert)
 						else:
-							table[state,symbol].append (reduce(table_tuple = (state, symbol),
+							to_insert= reduce(table_tuple = (state, symbol),
 														 response = len(item.production),
-														 label = item))
+														 label = item)
+							if not to_insert in table[state,symbol]:
+								table[state,symbol].append(to_insert)
 				
 				if shift_reduce_conflict:
 					was_conflict = True
@@ -363,6 +357,11 @@ class Action:
 	def __repr__(self):
 		return repr(self.label)
 
+	def __eq__(self, other):
+		return self.table_tuple == other.table_tuple and self.response == other.response and self.label == other.label
+
+	def __hash__(self):
+		return hash(self.response) + hash(self.label) + hash(self.table_tuple)
 class reduce(Action):
 	pass
 
