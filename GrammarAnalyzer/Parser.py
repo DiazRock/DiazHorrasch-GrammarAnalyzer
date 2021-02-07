@@ -244,22 +244,25 @@ class LR_Parser(PredictiveParser):
 						else []
 						
 					for symbol in looks_ahead:
-						if table[state,symbol]:
-							if isinstance(table[state,symbol][-1], shift):
-								shift_reduce_conflict.append((table[state,symbol][-1], symbol))
-							else:
-								reduce_reduce_conflict.append((table[state,symbol][-1], symbol))
+
+						to_insert= reduce(table_tuple = (state, symbol),
+														response = len(item.production),
+														label = item)
+						if not to_insert in table[state,symbol]:
+							if table[state, symbol]:
+								if isinstance(table[state,symbol][-1], shift):
+									shift_reduce_conflict.append((table[state,symbol][-1], symbol))
+								else:
+									reduce_reduce_conflict.append((table[state,symbol][-1], symbol))
+
+							table[state,symbol].append(to_insert)
+						
 						if (parser_type == 'LR(0)' or symbol == FinalSymbol())  \
 							and (NoTerminal (self.augmentedGrammar.initialSymbol.name.rstrip("'")),) == item.production:
 							to_insert = accept(table_tuple = (state, symbol), response = 'accept', label='ok')
 							if not to_insert in table[state, symbol]:
 								table[state, symbol].append (to_insert)
-						else:
-							to_insert= reduce(table_tuple = (state, symbol),
-														 response = len(item.production),
-														 label = item)
-							if not to_insert in table[state,symbol]:
-								table[state,symbol].append(to_insert)
+							
 				
 				if shift_reduce_conflict:
 					was_conflict = True
@@ -369,6 +372,9 @@ class shift(Action):
 	pass
 
 class accept(Action):
+	def __repr__(self):
+		return 'ok'
+
 	pass
 
 class error(Action, Fail):

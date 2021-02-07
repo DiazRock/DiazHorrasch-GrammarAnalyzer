@@ -20,7 +20,6 @@ def CalculateFirst(G:GrammarClass):
                             break                            
                     if allEpsilon : changed = Add(Firsts[X], [Epsilon()])
 
-#Recordar que los elementos de los First son de tipo GrammarSymbol.
     return Firsts
     
 def CalculateFollow(G:GrammarClass, Firsts):
