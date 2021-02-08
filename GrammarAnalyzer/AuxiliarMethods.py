@@ -57,6 +57,15 @@ def Add(First, terminalList):
     First.update(terminalList)    
     return before != First
 
+def analize_is_regular(G):
+    for n in G.nonTerminals:
+        for prod in G.nonTerminals[n]:
+            for x in prod[:-1]:
+                if isinstance(x, NoTerminal):
+                    return False
+    return True
+
+
 def deleteInmediateLeftRecusrive(G:GrammarClass):
     nonRecusriveSet = {}
     for x in G.LeftRecSet:
@@ -74,6 +83,8 @@ def deleteInmediateLeftRecusrive(G:GrammarClass):
                     toInsert[x].append((*prod, newNotTerminal))
         nonRecusriveSet.update(toInsert)
     G.nonTerminals.update(nonRecusriveSet)
+    G.isRegular = analize_is_regular(G)
+    
 
 def refactorization(G:GrammarClass):
     commonPrefixForNonTerminal = {}
