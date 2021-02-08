@@ -61,9 +61,13 @@ def deleteInmediateLeftRecusrive(G:GrammarClass):
     nonRecusriveSet = {}
     for x in G.LeftRecSet:
         newNotTerminal = NoTerminal(x.name + "'")
-        toInsert = {x:[], newNotTerminal: [tuple([Epsilon()])]}
+        toInsert = {x:[], newNotTerminal: [()]}
         for prod in G.nonTerminals[x]:
             if prod[0] == x:
+                #if prod == (Epsilon(), ):
+                #    toInsert[newNotTerminal].append(((), newNotTerminal))
+                #else:
+                toInsert[x].append((*prod[1:],newNotTerminal))
                 toInsert[newNotTerminal].append((*prod[1:],newNotTerminal))
             else:
                 if not (len(prod) == 1 and prod[0] ==  Epsilon()):
@@ -154,7 +158,7 @@ def DFS(grammar, current, visited, reachable, generable):
                 visited[symbol] = True
                 DFS(grammar, symbol, visited, reachable, generable)
             allgenerable = generable[symbol]
-    generable[current] = allgenerable
+        generable[current]= generable[current] or allgenerable
 
 def delete_unit_productions(grammar: GrammarClass):
     changed = False
@@ -172,7 +176,10 @@ def convert_grammar_to_automaton(grammar: GrammarClass):
     refactorization (grammar )
     automaton_states = {x: state(label = x) for x in grammar.nonTerminals}
 
-    automaton = Automaton(states = list(automaton_states.values()), symbols = set(), initialState = automaton_states[grammar.initialSymbol], FinalStates = set(), transitions = {})     
+    automaton = Automaton(states = list(automaton_states.values()), 
+                          symbols = set(), 
+                          initialState = automaton_states[grammar.initialSymbol],
+                          FinalStates = set(), transitions = {})
     for nonTerminal in automaton_states:
         for prod in grammar.nonTerminals[nonTerminal]:
             symbol = ''
@@ -198,9 +205,9 @@ def convert_grammar_to_automaton(grammar: GrammarClass):
                     continue
 
             if not (automaton_states[nonTerminal], symbol) in automaton.transitions:             
-                automaton.transitions.update({(automaton_states[nonTerminal], symbol): [ state_input ] } )
+                automaton.transitions.update({(automaton_states[nonTerminal], symbol): (state_input, )  } )
             else:
-                automaton.transitions[automaton_states[nonTerminal], symbol] += [ state_input ]
+                automaton.transitions[automaton_states[nonTerminal], symbol] += (state_input, )
     
     return automaton
 

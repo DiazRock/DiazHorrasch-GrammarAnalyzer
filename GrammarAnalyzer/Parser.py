@@ -66,7 +66,7 @@ class LL_Parser(PredictiveParser):
 
 				index_node_tree += 1
 				node_to_push = Tree(label = str (prod) + '_' + str(index_node_tree), 
-                        children = [], parent = current_tree)
+						children = [], parent = current_tree)
 				current_tree.children.append(node_to_push)
 				for i in range(len(prod) - 1, -1, -1):
 					if prod[i] != Epsilon():
@@ -106,7 +106,7 @@ class LR_Parser(PredictiveParser):
 	def __init__(self, grammar, parse_type = 0):
 		super().__init__(grammar)
 		
-		initialSymbol = NoTerminal(name = grammar.initialSymbol.name + "'")                
+		initialSymbol = NoTerminal(name = grammar.initialSymbol.name + "*")                
 		d = {initialSymbol : [tuple([grammar.initialSymbol])]}
 		d.update(grammar.nonTerminals)
 		self.augmentedGrammar = GrammarClass(initialSymbol = None, terminals = [], nonTerminals=[] )
@@ -120,12 +120,12 @@ class LR_Parser(PredictiveParser):
 
 	def canonical_LR(self, parse_type = 'LR(0)'):
 		initialState =canonical_State (label = "I{0}".format(0), 
-                                 		setOfItems = [Item(label = {FinalSymbol()} if parse_type != 'SLR(1)' and parse_type != 'LR(0)' else None,
-                                                      grammar = self.augmentedGrammar, 
-                                                      nonTerminal= self.augmentedGrammar.initialSymbol, 
-                                                      point_Position = 0, 
-                                                      production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol][0])],
-                                   		grammar = self.augmentedGrammar)          
+								 		setOfItems = [Item(label = {FinalSymbol()} if parse_type != 'SLR(1)' and parse_type != 'LR(0)' else None,
+													  grammar = self.augmentedGrammar, 
+													  nonTerminal= self.augmentedGrammar.initialSymbol, 
+													  point_Position = 0, 
+													  production = self.augmentedGrammar.nonTerminals[self.augmentedGrammar.initialSymbol][0])],
+								   		grammar = self.augmentedGrammar)          
 		canonical_states = [initialState]
 		statesQueue = [canonical_states[0]]
 		transition_table = {}
@@ -139,8 +139,8 @@ class LR_Parser(PredictiveParser):
 			currentState.setOfItems = (LR_Parser.closure(self, currentState.kernel_items))
 			symbols = []
 			[symbols.append (item.production[item.point_Position]) for item in \
-       				  currentState.setOfItems if item.point_Position < len(item.production)\
-                 	  and not item.production[item.point_Position] in symbols ]
+					  currentState.setOfItems if item.point_Position < len(item.production)\
+				 	  and not item.production[item.point_Position] in symbols ]
 			for x in symbols:
 				new_state = LR_Parser.goto(self, currentState, x, len(canonical_states))
 				if otherCurrent:
@@ -267,9 +267,9 @@ class LR_Parser(PredictiveParser):
 				if shift_reduce_conflict:
 					was_conflict = True
 					conflict_info[state] += [shift_reduce_fail(shift_decision = shc,
-                                                reduce_decision = table[state,symbol], 
-                                                conflict_symbol = conflict_symbol,
-                                                state= state.label) for shc, conflict_symbol in shift_reduce_conflict ]
+												reduce_decision = table[state,symbol], 
+												conflict_symbol = conflict_symbol,
+												state= state.label) for shc, conflict_symbol in shift_reduce_conflict ]
 				if reduce_reduce_conflict:
 					was_conflict = True
 					conflict_info[state] += [reduce_reduce_fail(reduce_decision1 = rdc,
@@ -297,7 +297,7 @@ class LR_Parser(PredictiveParser):
 			if not action:
 				return Fail("({0}, {1}): Syntax error at or near {2}".format(row_tracker, column_tracker, tokens[i]))
 			if isinstance (action, accept):
-    				break
+					break
 			elif isinstance(action, shift):
 				stack_states.append(action.response)
 				index_node_tree += 1
@@ -311,7 +311,7 @@ class LR_Parser(PredictiveParser):
 				stack_states.append(self.LR_Automaton.transitions[(stack_states[-1], action.label.nonTerminal)])
 				index_node_tree += 1
 				stack_trees.append(Tree(label = str (action.label.nonTerminal) + "_" + str(index_node_tree), 
-                            children=children))
+							children=children))
 
 		return stack_trees.pop()
 

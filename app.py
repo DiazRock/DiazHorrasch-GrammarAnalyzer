@@ -25,7 +25,7 @@ def main():
 	)
 
 	
-	selection = st.sidebar.radio("Select the parser option", ['LL1', 'LR(0)', 'SLR(1)', 'LALR(1)', 'LR(1)'])
+	selection = st.sidebar.radio("Select the parser option", ['Regularize', 'LL1', 'LR(0)', 'SLR(1)', 'LALR(1)', 'LR(1)'])
 
 	st.sidebar.markdown(
 		'''
@@ -52,19 +52,20 @@ def main():
 			'All non terminals are reachables and generables'
 		else:
 			if not_generable_prod_set:
-				'The following non terminals are not generables %s' %not_generable_prod_set
+				st.markdown ('The following non terminals are not generables %s' %not_generable_prod_set)
 			if not_reachable_prod_set:
-				'The following non terminals are not reachables %s' %not_reachable_prod_set
-
+				st.markdown ('The following grammar symbols are not reachables %s' %not_reachable_prod_set)
+			st.markdown('This is the cleaned grammar :')
+			print_grammar(new_g)
 		if g.LeftRecSet:
-			'The following non terminals have left recursive productions %s' %new_g.LeftRecSet
+			st.markdown ('The following non terminals have left recursive productions %s' %new_g.LeftRecSet)
 			am.deleteInmediateLeftRecusrive(new_g)
-			'This is the grammar without left recursive productions'
-
+			st.markdown(
+			'This is the grammar without left recursive productions :\n' )
 			print_grammar(new_g)
 
 		if selection == 'LL1':
-			ll = parser.LL_Parser(grammar= g)
+			ll = parser.LL_Parser(grammar= new_g)
 			result_parse = ll.buildTable()
 			if isinstance(result_parse, dict):
 				succes_table(succes_msg= 'The grammar is LL1', 
@@ -84,23 +85,32 @@ def main():
 			else:
 				st.write(result_parse)
 
+		if selection == 'Regularize':
+			if new_g.isRegular:
+				st.markdown('The grammar is regular')
+				aut= am.convert_grammar_to_automaton(grammar= new_g)
+				draw_automaton(aut)
+
+			else:
+				st.markdown('The grammar is not regular')
+
 		if selection == 'LR(0)':
-			build_bottom_up(grammar= g, 
+			build_bottom_up(grammar= new_g, 
 							succes_msg= 'The grammar is LR(0)', 
 							parse_type= 'LR(0)')
 
 		if selection == 'SLR(1)':
-			build_bottom_up(grammar= g, 
+			build_bottom_up(grammar= new_g,
 							succes_msg= 'The grammar is SLR(1)', 
 							parse_type= 'SLR(1)')
 			
 		if selection == 'LALR(1)':
-			build_bottom_up(grammar= g, 
+			build_bottom_up(grammar= new_g, 
 							succes_msg= 'The grammar is LALR(1)', 
 							parse_type= 'LALR(1)')
 
 		if selection == 'LR(1)':
-			build_bottom_up(grammar= g, 
+			build_bottom_up(grammar= new_g,
 							succes_msg= 'The grammar is LR(1)', 
 							parse_type= 'LR(1)')
 			
@@ -151,12 +161,9 @@ def input_chains(lr):
 def print_grammar(g):
 	for nt in g.nonTerminals:
 		str_to_print = '%s -> ' %nt
-		for i, prod in enumerate(g.nonTerminals[nt]):
-			str_to_print += ''.join(token.name for token in prod)
-			if i != len(g.nonTerminals[nt]) - 1:
-				str_to_print += ' | '
-		str_to_print
-		'\n'
+		for prod in g.nonTerminals[nt]:
+			str_to_print += ' | '.join(token.name for token in prod)
+		st.markdown(str_to_print)
 
 def draw_automaton(t):
 	G= nx.DiGraph()
