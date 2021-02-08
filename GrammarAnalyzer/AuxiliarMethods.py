@@ -231,7 +231,7 @@ def from_epsilonNFA_to_DFA(automaton: Automaton):
                     queue.append(state_to_enqueue)
                     DFA_states.append(state_to_enqueue)
                     if isFinalState: 
-                        finalStates.append(current_state)
+                        finalStates.append(state_to_enqueue)
     
 
     return Automaton(states = DFA_states, symbols = automaton.symbols, initialState = initial, FinalStates = finalStates, transitions = DFA_transitions)
@@ -250,7 +250,8 @@ def epsilon_closure(automaton: Automaton, superState:state):
     isFinalState = False
     while stack:
         current_state = stack.pop()
-        isFinalState = current_state in automaton.FinalStates
+        if not isFinalState:
+            isFinalState = current_state in automaton.FinalStates
         if (current_state, Epsilon() ) in automaton.transitions:
             for u in automaton.transitions[ current_state, Epsilon()]:
                 if not u in e_closure.label:

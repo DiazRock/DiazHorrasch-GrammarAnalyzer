@@ -89,9 +89,15 @@ def main():
 			if new_g.isRegular:
 				st.markdown('The grammar is regular')
 				aut= am.convert_grammar_to_automaton(grammar= new_g)
+				st.markdown('Here is the œ-NFA')
 				draw_automaton(aut,
 							  edges_generator= lambda t: [(x, S, symbol) for x in t.states for symbol in t.symbols.union({automaton.Epsilon()}) if (x, symbol) in t.transitions for S in t.transitions[x, symbol]])
-
+				st.markdown('The DFA')
+				dfa= am.from_epsilonNFA_to_DFA(aut)
+				draw_automaton(dfa)
+				st.markdown('The regular expression from DFA')
+				regexpr= am.brzozowski_dfa_to_regexp(dfa)
+				st.markdown(regexpr)
 			else:
 				st.markdown('The grammar is not regular')
 
