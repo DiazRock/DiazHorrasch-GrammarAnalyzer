@@ -89,7 +89,8 @@ def main():
 			if new_g.isRegular:
 				st.markdown('The grammar is regular')
 				aut= am.convert_grammar_to_automaton(grammar= new_g)
-				draw_automaton(aut)
+				draw_automaton(aut,
+							  edges_generator= lambda t: [(x, S, symbol) for x in t.states for symbol in t.symbols.union({automaton.Epsilon()}) if (x, symbol) in t.transitions for S in t.transitions[x, symbol]])
 
 			else:
 				st.markdown('The grammar is not regular')
@@ -165,9 +166,9 @@ def print_grammar(g):
 			str_to_print += ' | '.join(token.name for token in prod)
 		st.markdown(str_to_print)
 
-def draw_automaton(t):
+def draw_automaton(t, edges_generator = lambda t: [(x, t.transitions[x, symbol], symbol) for x in t.states for symbol in t.symbols.union({automaton.Epsilon()}) if (x, symbol) in t.transitions]):
 	G= nx.DiGraph()
-	edges= [(x, t.transitions[x, symbol], symbol) for x in t.states for symbol in t.symbols if (x, symbol) in t.transitions]
+	edges= edges_generator(t)
 	for (x, y, label) in edges:
 		G.add_edge(x, y, label= label)
 	dot = nx.nx_pydot.to_pydot(G)

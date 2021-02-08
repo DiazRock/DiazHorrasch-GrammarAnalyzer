@@ -179,7 +179,8 @@ def convert_grammar_to_automaton(grammar: GrammarClass):
     automaton = Automaton(states = list(automaton_states.values()), 
                           symbols = set(), 
                           initialState = automaton_states[grammar.initialSymbol],
-                          FinalStates = set(), transitions = {})
+                          FinalStates = set(), 
+                          transitions = {})
     for nonTerminal in automaton_states:
         for prod in grammar.nonTerminals[nonTerminal]:
             symbol = ''
@@ -204,10 +205,8 @@ def convert_grammar_to_automaton(grammar: GrammarClass):
                     automaton.FinalStates.update( {automaton_states[nonTerminal]} )
                     continue
 
-            if not (automaton_states[nonTerminal], symbol) in automaton.transitions:             
-                automaton.transitions.update({(automaton_states[nonTerminal], symbol): (state_input, )  } )
-            else:
-                automaton.transitions[automaton_states[nonTerminal], symbol] += (state_input, )
+            automaton.transitions[automaton_states[nonTerminal], symbol] = \
+                automaton.transitions.get((automaton_states[nonTerminal], symbol), ()) + (state_input, )
     
     return automaton
 

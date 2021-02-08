@@ -35,7 +35,7 @@ class state:
 		return hash(self.label)
 
 	def __repr__(self):
-		return "state: !" + repr(self.label) + "!"
+		return "state -> !" + repr(self.label) + "!"
 
 
 class canonical_State(state):    
