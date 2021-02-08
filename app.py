@@ -128,12 +128,12 @@ def main():
 	Here's a small, quick, example grammar to give you an idea of the format of the grammars:
 
 	S -> id | 
-			V assign E.
+			V assign E
 
-	V -> id.
+	V -> id
 
 	E -> V | 
-			num.
+			num
 
 	'''
 
